@@ -33,6 +33,9 @@ const ROTULOS = {
 
 const $ = s => document.querySelector(s);
 const limiteMin = () => paraMin(estado.config.limite || '23:00');
+/* dias já encerrados não recebem programação nova */
+const ehPassado = iso => iso < hojeIso();
+const maiorData = (a, b) => (a > b ? a : b);
 
 /* ================= INÍCIO ================= */
 
@@ -130,6 +133,12 @@ function renderDia() {
   $('#tituloDia').textContent = iso === hoje ? 'Hoje' : iso === somarDias(hoje, 1) ? 'Amanhã' : iso === somarDias(hoje, -1) ? 'Ontem' : nomeDia(iso);
   $('#subtituloDia').textContent = dataExtenso(iso);
 
+  const passado = ehPassado(iso);
+  $('#btnNova').disabled = passado;
+  $('#btnImprevisto').disabled = passado;
+  $('#btnRecalcular').disabled = passado;
+  $('#avisoPassado').hidden = !passado;
+
   const lista = ordenarPorInicio(tarefasDoDia(iso));
   const planejado = lista.reduce((s, t) => s + t.duracao, 0);
   const feito = lista.filter(t => t.status === 'concluida');
@@ -143,7 +152,9 @@ function renderDia() {
 
   const ul = $('#listaTarefas');
   if (!lista.length) {
-    ul.innerHTML = `<li class="vazio">Nenhuma atividade neste dia.<br><span class="fraco">Toque em “+ Nova atividade” para programar.</span></li>`;
+    ul.innerHTML = passado
+      ? `<li class="vazio">Nenhuma atividade foi programada neste dia.</li>`
+      : `<li class="vazio">Nenhuma atividade neste dia.<br><span class="fraco">Toque em “+ Nova atividade” para programar.</span></li>`;
     return;
   }
 
@@ -374,11 +385,17 @@ function recalcularManual() {
 
 function formularioTarefa(tarefa) {
   const novo = !tarefa;
+  if (novo && ehPassado(dataSelecionada)) {
+    aviso('Este dia já passou — programe a partir de hoje.');
+    return;
+  }
   const base = tarefa || {
     data: dataSelecionada,
     titulo: '',
     categoria: '',
-    inicio: paraHora(Math.min(limiteMin() - 30, Math.ceil((minutosAgora() + 10) / 5) * 5)),
+    inicio: dataSelecionada > hojeIso()
+      ? '08:00'
+      : paraHora(Math.min(limiteMin() - 30, Math.ceil((minutosAgora() + 10) / 5) * 5)),
     duracao: 30,
     obs: ''
   };
@@ -412,7 +429,7 @@ function formularioTarefa(tarefa) {
         <span>Repetir nos dias da semana</span>
         <div class="dias-semana" id="fDias">${diasBotoes}</div>
       </div>
-      <label class="campo"><span>Repetir até</span><input type="date" id="fAte" value="${somarDias(base.data, 28)}"></label>
+      <label class="campo"><span>Repetir até</span><input type="date" id="fAte" min="${base.data}" value="${somarDias(base.data, 28)}"></label>
       <p class="fraco">Sem nenhum dia marcado, a atividade fica só em ${dataCurta(base.data)}.</p>` : ''}
       ${!novo && tarefa.serie ? `
       <label class="linha-opcao"><input type="checkbox" id="fSerie"><span>Aplicar também aos próximos dias desta série</span></label>` : ''}
@@ -480,6 +497,7 @@ function salvarFormulario(m, tarefa) {
 
 function gerarDatas(dataBase, diasSemana, ate) {
   if (!diasSemana.length || !ate || ate <= dataBase) return [dataBase];
+  const piso = hojeIso();
   const datas = new Set([dataBase]);
   let cursor = dataBase;
   let guarda = 0;
@@ -487,7 +505,7 @@ function gerarDatas(dataBase, diasSemana, ate) {
     cursor = somarDias(cursor, 1);
     if (diasSemana.includes(dataDeIso(cursor).getDay())) datas.add(cursor);
   }
-  return [...datas].sort();
+  return [...datas].filter(d => d >= piso).sort();
 }
 
 function confirmarExclusao(t) {
@@ -500,6 +518,10 @@ function confirmarExclusao(t) {
 /* ================= IMPREVISTO ================= */
 
 function fluxoImprevisto() {
+  if (ehPassado(dataSelecionada)) {
+    aviso('Este dia já passou — imprevistos só valem de hoje em diante.');
+    return;
+  }
   const abertas = ordenarPorInicio(tarefasDoDia(dataSelecionada).filter(t => ['planejada', 'aguardando_checkin'].includes(t.status)));
   const opcoes = abertas.map(t => `<option value="${t.id}">${escapar(t.titulo)} (${t.inicio} · ${formatarDuracao(t.duracao)})</option>`).join('');
 
@@ -588,7 +610,7 @@ function fluxoCopiarDia() {
     subtitulo: `${lista.length} atividade(s) de ${dataCurta(dataSelecionada)}`,
     corpo: `
       <div class="campo"><span>Para quais dias da semana</span><div class="dias-semana" id="cDias">${diasBotoes}</div></div>
-      <label class="campo"><span>Até a data</span><input type="date" id="cAte" value="${somarDias(dataSelecionada, 7)}"></label>
+      <label class="campo"><span>Até a data</span><input type="date" id="cAte" min="${hojeIso()}" value="${somarDias(maiorData(dataSelecionada, hojeIso()), 7)}"></label>
       <label class="linha-opcao"><input type="checkbox" id="cLimpar"><span>Substituir o que já existir nesses dias</span></label>`,
     acoes: [
       {
@@ -597,8 +619,9 @@ function fluxoCopiarDia() {
           const ate = m.querySelector('#cAte').value;
           const limpar = m.querySelector('#cLimpar').checked;
           if (!dias.length) { aviso('Marque pelo menos um dia da semana.'); return; }
-          const destinos = gerarDatas(dataSelecionada, dias, ate).filter(d => d !== dataSelecionada);
-          if (!destinos.length) { aviso('Nenhum dia de destino no período.'); return; }
+          const destinos = gerarDatas(dataSelecionada, dias, ate)
+            .filter(d => d !== dataSelecionada && !ehPassado(d));
+          if (!destinos.length) { aviso('Nenhum dia de destino de hoje em diante nesse período.'); return; }
           const serie = uid();
           destinos.forEach(data => {
             if (limpar) estado.tarefas = estado.tarefas.filter(t => !(t.data === data && t.status === 'planejada'));
