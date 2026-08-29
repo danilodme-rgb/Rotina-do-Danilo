@@ -35,16 +35,13 @@ export function abrirModal({ titulo, subtitulo = '', corpo = '', acoes = [], fec
 
   if (fechavel) fundo.addEventListener('click', fecharModal);
 
-  const item = document.createElement('div');
-  item.style.position = 'absolute';
-  item.style.inset = '0';
-  item.appendChild(fundo);
-  item.appendChild(modal);
-
   caixa.innerHTML = '';
-  caixa.appendChild(item);
+  caixa.appendChild(fundo);
+  caixa.appendChild(modal);
+  caixa.scrollTop = 0;
   caixa.classList.add('aberto');
-  pilha.push(item);
+  document.body.classList.add('travado');
+  pilha.push(modal);
 
   const primeiro = modal.querySelector('input, select, textarea, button');
   if (primeiro) setTimeout(() => primeiro.focus(), 60);
@@ -55,6 +52,7 @@ export function fecharModal() {
   const caixa = caixaModais();
   caixa.innerHTML = '';
   caixa.classList.remove('aberto');
+  document.body.classList.remove('travado');
   pilha = [];
 }
 
