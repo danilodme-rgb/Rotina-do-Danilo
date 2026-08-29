@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rotina do Danilo</title>
+<meta name="theme-color" content="#0b0b0c">
+<meta name="description" content="Aplicativo pessoal para planejar, executar e medir a rotina diária.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone.svg">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo-linha">
+    <div class="marca">
+      <span class="logo">R</span>
+      <div>
+        <h1>Rotina do Danilo</h1>
+        <p id="relogio" class="relogio">--:--</p>
+      </div>
+    </div>
+    <button id="btnPermissao" class="btn btn-fantasma pequeno" hidden>Ativar alertas</button>
+  </div>
+
+  <div id="painelAgora" class="agora">
+    <span class="agora-rotulo">Agora</span>
+    <span id="agoraTexto" class="agora-texto">Nada em andamento</span>
+  </div>
+
+  <nav class="abas" id="abas">
+    <button class="aba ativa" data-aba="dia">Dia</button>
+    <button class="aba" data-aba="calendario">Calendário</button>
+    <button class="aba" data-aba="relatorio">Relatório</button>
+    <button class="aba" data-aba="ajustes">Ajustes</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ================= DIA ================= -->
+  <section id="aba-dia" class="secao ativa">
+    <div class="barra-dia">
+      <button class="btn btn-icone" id="diaAnterior" aria-label="Dia anterior">‹</button>
+      <div class="barra-dia-centro">
+        <strong id="tituloDia">Hoje</strong>
+        <span id="subtituloDia" class="fraco"></span>
+      </div>
+      <button class="btn btn-icone" id="diaSeguinte" aria-label="Próximo dia">›</button>
+    </div>
+
+    <div class="resumo-dia" id="resumoDia"></div>
+
+    <div class="acoes-dia">
+      <button class="btn btn-primario" id="btnNova">+ Nova atividade</button>
+      <button class="btn" id="btnImprevisto">Imprevisto</button>
+      <button class="btn" id="btnRecalcular">Recalcular</button>
+      <button class="btn btn-fantasma" id="btnCopiarDia">Copiar dia</button>
+    </div>
+
+    <ul class="lista-tarefas" id="listaTarefas"></ul>
+  </section>
+
+  <!-- ============== CALENDÁRIO ============== -->
+  <section id="aba-calendario" class="secao">
+    <div class="barra-dia">
+      <button class="btn btn-icone" id="mesAnterior" aria-label="Mês anterior">‹</button>
+      <div class="barra-dia-centro"><strong id="tituloMes"></strong></div>
+      <button class="btn btn-icone" id="mesSeguinte" aria-label="Próximo mês">›</button>
+    </div>
+    <div class="semana-cabecalho">
+      <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+    </div>
+    <div class="grade-mes" id="gradeMes"></div>
+    <p class="legenda">
+      <span class="ponto ponto-cheio"></span> tudo concluído
+      <span class="ponto ponto-parcial"></span> parcial
+      <span class="ponto ponto-vazio"></span> nada feito
+    </p>
+  </section>
+
+  <!-- ============== RELATÓRIO ============== -->
+  <section id="aba-relatorio" class="secao">
+    <div class="barra-dia">
+      <button class="btn btn-icone" id="semanaAnterior" aria-label="Semana anterior">‹</button>
+      <div class="barra-dia-centro">
+        <strong id="tituloSemana"></strong>
+        <span class="fraco">Relatório semanal</span>
+      </div>
+      <button class="btn btn-icone" id="semanaSeguinte" aria-label="Próxima semana">›</button>
+    </div>
+    <div id="conteudoRelatorio"></div>
+  </section>
+
+  <!-- =============== AJUSTES =============== -->
+  <section id="aba-ajustes" class="secao">
+    <div class="cartao">
+      <h2>Alertas</h2>
+      <label class="campo">
+        <span>Avisar quantos minutos antes</span>
+        <input type="number" id="cfgAntecedencia" min="1" max="60" step="1">
+      </label>
+      <label class="linha-opcao">
+        <input type="checkbox" id="cfgSom">
+        <span>Tocar som nos alertas</span>
+      </label>
+      <label class="linha-opcao">
+        <input type="checkbox" id="cfgRepetir">
+        <span>Insistir a cada 10 min enquanto houver check-in/check-out pendente</span>
+      </label>
+      <p class="fraco" id="estadoPermissao"></p>
+    </div>
+
+    <div class="cartao">
+      <h2>Reprogramação</h2>
+      <label class="campo">
+        <span>Horário limite do dia</span>
+        <input type="time" id="cfgLimite">
+      </label>
+      <label class="linha-opcao">
+        <input type="checkbox" id="cfgAutoRecalculo">
+        <span>Recalcular automaticamente as próximas atividades a cada check-in/check-out</span>
+      </label>
+      <label class="campo">
+        <span>Duração mínima ao comprimir (min)</span>
+        <input type="number" id="cfgDuracaoMinima" min="1" max="60" step="1">
+      </label>
+    </div>
+
+    <div class="cartao">
+      <h2>Como os avisos funcionam</h2>
+      <ul class="fraco" style="margin:0;padding-left:18px;line-height:1.7">
+        <li>Com o app aberto (mesmo em outra aba), os avisos de 5 minutos antes, de início e de término chegam como notificação do sistema.</li>
+        <li>Com o app fechado, o navegador não dispara alarmes. Por isso, ao reabrir, o app pergunta o que aconteceu com cada atividade em aberto.</li>
+        <li>Nada de check-in ou check-out se perde: a atividade fica esperando a sua resposta e continua cobrando.</li>
+        <li>Instale o app na tela de início (Adicionar à tela de início / Instalar) para abrir rápido e funcionar offline.</li>
+      </ul>
+    </div>
+
+    <div class="cartao">
+      <h2>Meus dados</h2>
+      <p class="fraco">Tudo fica gravado apenas neste aparelho. Faça backup de vez em quando.</p>
+      <div class="acoes-dia">
+        <button class="btn" id="btnExportar">Exportar backup</button>
+        <button class="btn" id="btnImportar">Importar backup</button>
+        <button class="btn btn-perigo" id="btnLimpar">Apagar tudo</button>
+      </div>
+      <input type="file" id="arquivoImportar" accept="application/json" hidden>
+      <p class="fraco" id="infoArmazenamento"></p>
+    </div>
+  </section>
+</main>
+
+<div id="modais" class="modais"></div>
+<div id="toasts" class="toasts"></div>
+
+<script type="module" src="js/app.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
