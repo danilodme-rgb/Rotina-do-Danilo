@@ -176,33 +176,47 @@ th{color:var(--texto-fraco);font-weight:500;font-size:11px;text-transform:upperc
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* ===== Formulários ===== */
-.campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;min-width:0}
 .campo>span{font-size:12px;color:var(--texto-fraco)}
 input[type=text],input[type=time],input[type=number],input[type=date],select,textarea{
   background:var(--superficie-2);border:1px solid var(--borda);border-radius:var(--raio-p);
-  padding:10px;width:100%;
+  padding:10px;width:100%;min-width:0;max-width:100%;min-height:44px;
+  /* 16px evita o zoom automático do iOS ao focar, que desloca a tela toda */
+  font-size:16px;
+}
+/* o controle nativo de hora/data tem largura própria e estoura a coluna no celular */
+input[type=time],input[type=date]{
+  -webkit-appearance:none;appearance:none;
+  display:block;text-align:left;
 }
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--borda-forte);background:var(--superficie-3)}
 .linha-opcao{display:flex;align-items:center;gap:9px;margin-bottom:10px;font-size:14px;cursor:pointer}
 input[type=checkbox]{width:18px;height:18px;accent-color:#c9c9d0}
-.duplo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dias-semana{display:flex;gap:5px;flex-wrap:wrap}
+.duplo{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.dias-semana{display:flex;gap:4px;flex-wrap:wrap}
 .dia-semana{
   border:1px solid var(--borda);background:var(--superficie-2);border-radius:9px;
-  padding:8px 0;width:44px;text-align:center;cursor:pointer;font-size:12px;user-select:none;
+  padding:10px 0;flex:1 1 34px;min-width:34px;text-align:center;
+  cursor:pointer;font-size:12px;user-select:none;
 }
 .dia-semana.marcado{background:var(--branco);color:#111;border-color:var(--branco);font-weight:600}
 
 /* ===== Modal ===== */
 .modais{position:fixed;inset:0;z-index:60;display:none}
-.modais.aberto{display:block}
-.fundo-modal{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(2px)}
+/* o overlay é quem rola: o cartão inteiro (título junto) se move como um bloco só */
+.modais.aberto{
+  display:flex;align-items:center;justify-content:center;
+  padding:14px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+.fundo-modal{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(2px)}
 .modal{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(460px,calc(100vw - 28px));max-height:86vh;overflow:auto;
+  position:relative;margin:auto;
+  width:min(460px,100%);
   background:var(--superficie);border:1px solid var(--borda-forte);border-radius:16px;
   box-shadow:var(--sombra);padding:18px;
 }
+/* trava a rolagem da página atrás enquanto o modal está aberto */
+body.travado{overflow:hidden}
 .modal h2{font-size:17px;margin-bottom:4px}
 .modal .subtitulo{color:var(--texto-fraco);font-size:13px;margin:0 0 14px}
 .acoes-modal{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
@@ -220,4 +234,6 @@ input[type=checkbox]{width:18px;height:18px;accent-color:#c9c9d0}
   .tarefa{grid-template-columns:66px 1fr;gap:9px}
   .horario strong{font-size:15px}
   .acoes-modal .btn{min-width:100%}
+  .modais.aberto{padding:10px;align-items:flex-start}
+  .modal{padding:16px}
 }
