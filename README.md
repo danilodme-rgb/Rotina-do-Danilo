@@ -54,6 +54,12 @@ instalar como aplicativo.
 > É preciso servir por `http://` ou `https://` (não abrir o arquivo direto pelo
 > `file://`), porque o app usa módulos JavaScript e service worker.
 
+O repositório traz o workflow `.github/workflows/pages.yml`, que republica o
+site a cada push na `main`. Para usá-lo, deixe **Settings → Pages → Source**
+como **GitHub Actions**. Se preferir o modo simples, escolha **Deploy from a
+branch** (`main` / `root`) e apague o workflow — os dois caminhos publicam o
+mesmo site.
+
 ## Estrutura
 
 | Arquivo | Para que serve |
