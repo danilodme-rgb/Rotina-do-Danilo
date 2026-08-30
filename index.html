@@ -153,9 +153,16 @@
       </div>
       <input type="file" id="arquivoImportar" accept="application/json" hidden>
       <p class="fraco" id="infoArmazenamento"></p>
+      <p class="fraco" id="infoVersao"></p>
     </div>
   </section>
 </main>
+
+<div id="faixaVersao" class="faixa-versao" hidden>
+  <span>Nova versão disponível.</span>
+  <button class="btn btn-primario pequeno" id="btnAtualizar">Atualizar</button>
+  <button class="btn btn-fantasma pequeno" id="btnAdiarVersao" aria-label="Agora não">Agora não</button>
+</div>
 
 <div id="modais" class="modais"></div>
 <div id="toasts" class="toasts"></div>

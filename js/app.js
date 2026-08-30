@@ -14,6 +14,7 @@ import {
 import { abrirModal, fecharModal, modalAberto, aviso, escapar } from './interface.js';
 import { permissao, pedirPermissao, notificar, tocar, piscarTitulo, pararTitulo } from './notificacoes.js';
 import { relatorioSemana } from './relatorio.js';
+import { VERSAO, PUBLICADO } from './versao.js';
 
 /* ---------- estado da tela ---------- */
 let dataSelecionada = hojeIso();
@@ -21,6 +22,8 @@ let mesVisivel = { ano: new Date().getFullYear(), mes: new Date().getMonth() };
 let semanaSelecionada = inicioSemana(hojeIso());
 let filaPendencias = [];
 let processandoFila = false;
+let ultimaChecagemVersao = 0;
+let versaoNova = null;
 
 const ROTULOS = {
   planejada: 'Planejada',
@@ -47,6 +50,7 @@ function iniciar() {
   renderTudo();
   processarFila();
   setInterval(() => tique(), 10000);
+  setTimeout(() => verificarVersao(), 4000);
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
@@ -54,6 +58,7 @@ function iniciar() {
       renderTudo();
       montarFilaPendencias();
       processarFila();
+      verificarVersao();
     }
   });
 }
@@ -104,6 +109,62 @@ function ligarEventos() {
   $('#btnImportar').addEventListener('click', () => $('#arquivoImportar').click());
   $('#arquivoImportar').addEventListener('change', importarBackup);
   $('#btnLimpar').addEventListener('click', confirmarLimpeza);
+
+  $('#btnAtualizar').addEventListener('click', aplicarAtualizacao);
+  $('#btnAdiarVersao').addEventListener('click', () => {
+    mostrarFaixaVersao(false);
+    aviso('Tudo bem — eu lembro de novo mais tarde.');
+  });
+}
+
+/* ================= ATUALIZAÇÃO DO APP ================= */
+
+/* Compara a versão que está rodando com a publicada no servidor.
+   Em desenvolvimento (VERSAO === 'dev') não há o que comparar. */
+async function verificarVersao(forcado = false) {
+  if (VERSAO === 'dev' || !navigator.onLine) return;
+  if (!forcado && Date.now() - ultimaChecagemVersao < 300000) return;
+  ultimaChecagemVersao = Date.now();
+  try {
+    const resp = await fetch(`versao.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!resp.ok) return;
+    const dados = await resp.json();
+    if (dados.versao && dados.versao !== VERSAO) {
+      versaoNova = dados;
+      mostrarFaixaVersao(true);
+    }
+  } catch { /* sem rede ou arquivo ausente: segue a vida */ }
+}
+
+function mostrarFaixaVersao(visivel) {
+  $('#faixaVersao').hidden = !visivel;
+  document.body.classList.toggle('com-faixa', visivel);
+}
+
+/* Busca os arquivos ignorando o cache do navegador, limpa o cache do
+   service worker e recarrega — assim a versão nova entra de primeira. */
+async function aplicarAtualizacao() {
+  const botao = $('#btnAtualizar');
+  botao.disabled = true;
+  botao.textContent = 'Atualizando...';
+  const arquivos = [
+    './', './index.html', './css/estilo.css', './manifest.webmanifest', './icone.svg',
+    './js/app.js', './js/agenda.js', './js/estado.js', './js/interface.js',
+    './js/notificacoes.js', './js/relatorio.js', './js/versao.js'
+  ];
+  try {
+    await Promise.all(arquivos.map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+    if ('caches' in window) {
+      const chaves = await caches.keys();
+      await Promise.all(chaves.map(c => caches.delete(c)));
+    }
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      await reg?.update().catch(() => {});
+    }
+  } finally {
+    location.reload();
+  }
 }
 
 function trocarAba(nome) {
@@ -784,6 +845,10 @@ function renderAjustes() {
   const total = estado.tarefas.length;
   const dias = new Set(estado.tarefas.map(t => t.data)).size;
   $('#infoArmazenamento').textContent = `${total} atividade(s) em ${dias} dia(s) guardadas neste aparelho.`;
+  $('#infoVersao').textContent = VERSAO === 'dev'
+    ? 'Versão: desenvolvimento (rodando fora do site publicado).'
+    : `Versão ${VERSAO}${PUBLICADO ? ' · publicada em ' + PUBLICADO.slice(0, 10).split('-').reverse().join('/') : ''}` +
+      (versaoNova ? ` · há uma versão mais nova (${versaoNova.versao}) disponível.` : ' · esta é a mais recente que o app conhece.');
 }
 
 function atualizarBotaoPermissao() {
@@ -832,6 +897,7 @@ function tique(inicial = false) {
   $('#relogio').textContent = `${pad2(agora.getHours())}:${pad2(agora.getMinutes())} · ${dataCurta(hojeIso())}`;
 
   const mudou = verificarAlertas(agora);
+  if (Date.now() - ultimaChecagemVersao > 1800000) verificarVersao();
   renderAgora();
   if (mudou && !inicial) { renderDia(); renderCalendario(); }
 }

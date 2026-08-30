@@ -3,7 +3,7 @@ const CACHE = 'rotina-danilo-v1';
 const ARQUIVOS = [
   './', './index.html', './css/estilo.css', './icone.svg', './manifest.webmanifest',
   './js/app.js', './js/agenda.js', './js/estado.js', './js/interface.js',
-  './js/notificacoes.js', './js/relatorio.js'
+  './js/notificacoes.js', './js/relatorio.js', './js/versao.js'
 ];
 
 self.addEventListener('install', e => {
@@ -20,6 +20,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // o carimbo de versão nunca é cacheado: é ele que denuncia uma publicação nova
+  if (new URL(e.request.url).pathname.endsWith('/versao.json')) return;
   e.respondWith(
     fetch(e.request)
       .then(resp => {

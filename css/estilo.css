@@ -229,13 +229,26 @@ body.travado{overflow:hidden}
 .acoes-modal{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .acoes-modal .btn{flex:1;min-width:120px}
 
+/* ===== Faixa de nova versão ===== */
+.faixa-versao{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:70;
+  width:min(440px,calc(100vw - 24px));
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:var(--superficie-3);border:1px solid var(--borda-forte);
+  border-radius:var(--raio-p);padding:10px 12px;box-shadow:var(--sombra);
+  animation:sobe .2s ease-out;
+}
+.faixa-versao span{flex:1;font-size:13px;min-width:140px}
+.faixa-versao[hidden]{display:none}
+
 /* ===== Toasts ===== */
-.toasts{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;width:min(440px,calc(100vw - 24px))}
+.toasts{position:fixed;left:50%;bottom:18px;transition:bottom .2s;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;width:min(440px,calc(100vw - 24px))}
 .toast{
   background:var(--superficie-3);border:1px solid var(--borda-forte);border-radius:var(--raio-p);
   padding:11px 13px;font-size:13px;box-shadow:var(--sombra);animation:sobe .2s ease-out;
 }
 @keyframes sobe{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+body.com-faixa .toasts{bottom:78px}
 
 @media(max-width:420px){
   .tarefa{grid-template-columns:66px 1fr;gap:9px}

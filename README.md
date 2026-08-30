@@ -17,6 +17,7 @@ enviado para servidor nenhum.
 - **Imprevistos**: encaixar uma atividade nova ou puxar uma já programada para agora — o app pergunta o **horário de início** e a **previsão de duração** e reorganiza o resto.
 - **Relatório semanal** em horas e em porcentagem, por categoria e por atividade, com aderência ao planejado, atraso médio de check-in e desvio das estimativas.
 - **Backup**: exportar/importar um arquivo `.json`.
+- **Aviso de nova versão**: o app compara a versão que está rodando com a publicada e mostra a faixa "nova versão disponível — Atualizar", que limpa o cache e recarrega. A versão em uso aparece em **Ajustes**.
 
 ## Como o recálculo funciona
 
@@ -72,6 +73,7 @@ mesmo site.
 | `js/relatorio.js` | Consolidação semanal |
 | `js/notificacoes.js` | Notificações do sistema e som |
 | `js/interface.js` | Modais e avisos na tela |
+| `js/versao.js` | Versão em uso, carimbada na publicação |
 | `sw.js` | Funcionamento offline e clique na notificação |
 
 ## Limitação honesta sobre notificações

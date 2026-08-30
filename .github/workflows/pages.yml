@@ -32,6 +32,17 @@ jobs:
           # liga o Pages na primeira execução, se ainda estiver desligado
           enablement: true
 
+      - name: Carimbar a versão publicada
+        run: |
+          versao="${GITHUB_SHA::7}"
+          publicado="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '{"versao":"%s","publicado":"%s"}\n' "$versao" "$publicado" > versao.json
+          sed -i "s|export const VERSAO = 'dev';|export const VERSAO = '$versao';|" js/versao.js
+          sed -i "s|export const PUBLICADO = '';|export const PUBLICADO = '$publicado';|" js/versao.js
+          echo "Publicando versão $versao ($publicado)"
+          cat versao.json
+          grep 'export const' js/versao.js
+
       - name: Empacotar o site
         uses: actions/upload-pages-artifact@v3
         with:
