@@ -1,9 +1,9 @@
 /* Service worker: app disponível offline + clique nas notificações */
-const CACHE = 'rotina-danilo-v1';
+const CACHE = 'rotina-danilo-v2';
 const ARQUIVOS = [
   './', './index.html', './css/estilo.css', './icone.svg', './manifest.webmanifest',
   './js/app.js', './js/agenda.js', './js/estado.js', './js/interface.js',
-  './js/notificacoes.js', './js/relatorio.js'
+  './js/notificacoes.js', './js/relatorio.js', './js/compromissos.js'
 ];
 
 self.addEventListener('install', e => {

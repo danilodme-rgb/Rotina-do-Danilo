@@ -3,13 +3,20 @@
 import {
   paraMin, paraHora, minutosAgora, hojeIso, isoDe, dataDeIso, somarDias,
   dataExtenso, dataCurta, nomeMes, nomeDia, inicioSemana, formatarDuracao, formatarHoras,
-  fimPrevisto, duracaoReal, minutosContados, ordenarPorInicio, planejarRestante, pad2
+  fimPrevisto, duracaoReal, minutosContados, ordenarPorInicio, planejarRestante, pad2, MIN_DIA
 } from './agenda.js';
 
 import {
   estado, carregar, salvar, criarTarefa, acharTarefa, tarefasDoDia, removerTarefa,
-  removerSerie, categorias, zerarAvisos, exportar, importar, apagarTudo, uid, CONFIG_PADRAO
+  removerSerie, categorias, zerarAvisos, exportar, importar, apagarTudo, uid, CONFIG_PADRAO,
+  criarCompromisso, acharCompromisso, compromissosDoDia, removerCompromisso,
+  removerSerieCompromissos, tiposDeCompromisso, zerarAvisosCompromisso
 } from './estado.js';
+
+import {
+  TIPOS_SUGERIDOS, SITUACOES, fimCompromisso, ordenarCompromissos, conflitos,
+  acontecendoAgora, proximoCompromisso, resumoPorTipo
+} from './compromissos.js';
 
 import { abrirModal, fecharModal, modalAberto, aviso, escapar } from './interface.js';
 import { permissao, pedirPermissao, notificar, tocar, piscarTitulo, pararTitulo } from './notificacoes.js';
@@ -68,6 +75,7 @@ function ligarEventos() {
   $('#diaAnterior').addEventListener('click', () => { dataSelecionada = somarDias(dataSelecionada, -1); renderDia(); renderCalendario(); });
   $('#diaSeguinte').addEventListener('click', () => { dataSelecionada = somarDias(dataSelecionada, 1); renderDia(); renderCalendario(); });
   $('#btnNova').addEventListener('click', () => formularioTarefa(null));
+  $('#btnCompromisso').addEventListener('click', () => formularioCompromisso(null));
   $('#btnImprevisto').addEventListener('click', () => fluxoImprevisto());
   $('#btnRecalcular').addEventListener('click', () => recalcularManual());
   $('#btnCopiarDia').addEventListener('click', () => fluxoCopiarDia());
@@ -99,6 +107,7 @@ function ligarEventos() {
   $('#cfgLimite').addEventListener('change', e => { estado.config.limite = e.target.value || '23:00'; salvar(); renderDia(); });
   $('#cfgAutoRecalculo').addEventListener('change', e => { estado.config.autoRecalculo = e.target.checked; salvar(); });
   $('#cfgDuracaoMinima').addEventListener('change', e => { estado.config.duracaoMinima = Math.max(1, Number(e.target.value) || 5); salvar(); });
+  $('#cfgAvisoCompromisso').addEventListener('change', e => { estado.config.avisoCompromisso = Math.max(0, Number(e.target.value) || 0); salvar(); });
 
   $('#btnExportar').addEventListener('click', exportarBackup);
   $('#btnImportar').addEventListener('click', () => $('#arquivoImportar').click());
@@ -140,26 +149,43 @@ function renderDia() {
   $('#avisoPassado').hidden = !passado;
 
   const lista = ordenarPorInicio(tarefasDoDia(iso));
+  const compromissos = ordenarCompromissos(compromissosDoDia(iso));
   const planejado = lista.reduce((s, t) => s + t.duracao, 0);
   const feito = lista.filter(t => t.status === 'concluida');
   const realizado = feito.reduce((s, t) => s + minutosContados(t), 0);
   const pct = planejado ? Math.round((realizado / planejado) * 100) : 0;
 
+  $('#resumoDia').classList.toggle('quatro', compromissos.length > 0);
   $('#resumoDia').innerHTML = `
     <div class="bloco-resumo"><b>${feito.length}/${lista.length}</b><span>Concluídas</span></div>
     <div class="bloco-resumo"><b>${formatarDuracao(realizado)}</b><span>Realizado</span></div>
-    <div class="bloco-resumo"><b>${pct}%</b><span>do planejado</span></div>`;
+    <div class="bloco-resumo"><b>${pct}%</b><span>do planejado</span></div>
+    ${compromissos.length ? `<div class="bloco-resumo"><b>${compromissos.length}</b><span>Compromissos</span></div>` : ''}`;
 
   const ul = $('#listaTarefas');
-  if (!lista.length) {
+  if (!lista.length && !compromissos.length) {
     ul.innerHTML = passado
-      ? `<li class="vazio">Nenhuma atividade foi programada neste dia.</li>`
-      : `<li class="vazio">Nenhuma atividade neste dia.<br><span class="fraco">Toque em “+ Nova atividade” para programar.</span></li>`;
+      ? `<li class="vazio">Nada foi registrado neste dia.<br><span class="fraco">Dá para anotar um compromisso que aconteceu.</span></li>`
+      : `<li class="vazio">Nada neste dia.<br><span class="fraco">Toque em “+ Nova atividade” para programar a rotina ou em “+ Compromisso” para marcar uma reunião, consulta ou exame.</span></li>`;
     return;
   }
 
   const agora = minutosAgora();
-  ul.innerHTML = lista.map(t => cartaoTarefa(t, iso === hoje, agora)).join('');
+  // uma linha do tempo só: a rotina e os compromissos misturados pelo horário
+  const itens = [
+    ...lista.map(t => ({
+      quando: t.inicioReal != null ? paraMin(t.inicioReal) : paraMin(t.inicio),
+      ordem: t.criadaEm,
+      html: cartaoTarefa(t, iso === hoje, agora)
+    })),
+    ...compromissos.map(c => ({
+      quando: paraMin(c.inicio),
+      ordem: c.criadaEm,
+      html: cartaoCompromisso(c, lista)
+    }))
+  ].sort((a, b) => a.quando - b.quando || a.ordem - b.ordem);
+
+  ul.innerHTML = itens.map(i => i.html).join('');
 }
 
 function cartaoTarefa(t, ehHoje, agora) {
@@ -215,9 +241,56 @@ function cartaoTarefa(t, ehHoje, agora) {
     </li>`;
 }
 
+/* ================= CARTÃO DE COMPROMISSO ================= */
+
+function cartaoCompromisso(c, atividadesDoDia = []) {
+  const fim = paraHora(fimCompromisso(c));
+
+  const chips = [`<span class="chip chip-compromisso">${escapar(c.tipo)}</span>`];
+  if (c.situacao !== 'marcado') chips.push(`<span class="chip">${SITUACOES[c.situacao]}</span>`);
+  if (c.situacao === 'marcado' && c.avisar > 0) chips.push(`<span class="chip">aviso ${formatarDuracao(c.avisar)} antes</span>`);
+  if (c.serie) chips.push('<span class="chip">série</span>');
+
+  const choques = conflitos(c, atividadesDoDia);
+  if (choques.length) {
+    chips.push(`<span class="chip chip-conflito">choca com ${escapar(choques.map(t => t.titulo).join(', '))}</span>`);
+  }
+
+  const detalhes = [];
+  if (c.local) detalhes.push(`Local: ${escapar(c.local)}`);
+  if (c.com) detalhes.push(`Com: ${escapar(c.com)}`);
+
+  const botoes = [];
+  if (c.situacao === 'marcado') {
+    botoes.push(`<button class="btn" data-comp="${c.id}" data-acao="aconteceu">Aconteceu</button>`);
+    botoes.push(`<button class="btn" data-comp="${c.id}" data-acao="cancelar">Cancelado</button>`);
+  } else {
+    botoes.push(`<button class="btn" data-comp="${c.id}" data-acao="remarcar">Voltar para marcado</button>`);
+  }
+  botoes.push(`<button class="btn btn-fantasma" data-comp="${c.id}" data-acao="editarComp">Editar</button>`);
+  botoes.push(`<button class="btn btn-fantasma" data-comp="${c.id}" data-acao="excluirComp">Excluir</button>`);
+
+  return `
+    <li class="tarefa compromisso" data-situacao="${c.situacao}" data-comp="${c.id}">
+      <div class="horario">
+        <strong>${c.inicio}</strong>
+        <span>→ ${fim}</span>
+        <em>${formatarDuracao(c.duracao)}</em>
+      </div>
+      <div class="info">
+        <h3>${escapar(c.titulo)}</h3>
+        <p class="meta">${chips.join('')}</p>
+        ${detalhes.length ? `<p class="meta">${detalhes.join(' · ')}</p>` : ''}
+        ${c.obs ? `<p class="meta">${escapar(c.obs)}</p>` : ''}
+      </div>
+      <div class="acoes-tarefa">${botoes.join('')}</div>
+    </li>`;
+}
+
 function aoClicarNaLista(e) {
   const b = e.target.closest('button[data-acao]');
   if (!b) return;
+  if (b.dataset.comp) return acaoDeCompromisso(b.dataset.comp, b.dataset.acao);
   const t = acharTarefa(b.dataset.id);
   if (!t) return;
   const acoes = {
@@ -230,6 +303,19 @@ function aoClicarNaLista(e) {
     excluir: () => confirmarExclusao(t)
   };
   (acoes[b.dataset.acao] || (() => {}))();
+}
+
+function acaoDeCompromisso(id, acao) {
+  const c = acharCompromisso(id);
+  if (!c) return;
+  const acoes = {
+    aconteceu: () => mudarSituacao(c, 'realizado'),
+    cancelar: () => mudarSituacao(c, 'cancelado'),
+    remarcar: () => mudarSituacao(c, 'marcado'),
+    editarComp: () => formularioCompromisso(c),
+    excluirComp: () => confirmarExclusaoCompromisso(c)
+  };
+  (acoes[acao] || (() => {}))();
 }
 
 /* ================= CHECK-IN / CHECK-OUT ================= */
@@ -495,9 +581,8 @@ function salvarFormulario(m, tarefa) {
   renderTudo();
 }
 
-function gerarDatas(dataBase, diasSemana, ate) {
+function gerarDatas(dataBase, diasSemana, ate, piso = hojeIso()) {
   if (!diasSemana.length || !ate || ate <= dataBase) return [dataBase];
-  const piso = hojeIso();
   const datas = new Set([dataBase]);
   let cursor = dataBase;
   let guarda = 0;
@@ -513,6 +598,168 @@ function confirmarExclusao(t) {
   if (t.serie) acoes.push({ texto: 'Excluir esta e as próximas da série', tipo: 'perigo', aoClicar: () => { removerSerie(t.serie, t.data); salvar(); fecharModal(); renderTudo(); aviso('Série excluída a partir deste dia.'); } });
   acoes.push({ texto: 'Cancelar', aoClicar: () => fecharModal() });
   abrirModal({ titulo: 'Excluir atividade', subtitulo: escapar(t.titulo), corpo: '<p class="fraco">Isso não pode ser desfeito.</p>', acoes });
+}
+
+/* ================= COMPROMISSOS ================= */
+
+/* Compromisso tem hora marcada por terceiros: entra no dia como bloco fixo,
+   avisa antes e na hora, e nunca é movido pela reprogramação. */
+function formularioCompromisso(comp) {
+  const novo = !comp;
+  const base = comp || {
+    data: dataSelecionada,
+    titulo: '',
+    tipo: '',
+    inicio: dataSelecionada === hojeIso()
+      ? paraHora(Math.min(MIN_DIA - 60, Math.ceil((minutosAgora() + 30) / 15) * 15))
+      : '09:00',
+    duracao: 60,
+    local: '', com: '', obs: '',
+    avisar: estado.config.avisoCompromisso
+  };
+  const fim = paraHora(Math.min(MIN_DIA - 1, paraMin(base.inicio) + base.duracao));
+
+  const sugestoes = [...new Set([...tiposDeCompromisso(), ...TIPOS_SUGERIDOS])]
+    .map(t => `<option value="${escapar(t)}"></option>`).join('');
+  const diasBotoes = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    .map((d, i) => `<span class="dia-semana" data-dia="${i}">${d}</span>`).join('');
+
+  abrirModal({
+    titulo: novo ? 'Novo compromisso' : 'Editar compromisso',
+    subtitulo: 'Hora marcada — o app avisa, mas não mexe no horário',
+    corpo: `
+      <label class="campo">
+        <span>Qual é o compromisso</span>
+        <input type="text" id="kTitulo" value="${escapar(base.titulo)}" placeholder="Ex.: Consulta com o cardiologista" autocomplete="off">
+      </label>
+      <label class="campo">
+        <span>Tipo</span>
+        <input type="text" id="kTipo" list="listaTipos" value="${escapar(base.tipo)}" placeholder="Ex.: Consulta" autocomplete="off">
+        <datalist id="listaTipos">${sugestoes}</datalist>
+      </label>
+      <label class="campo"><span>Data</span><input type="date" id="kData" value="${base.data}"></label>
+      <div class="duplo">
+        <label class="campo"><span>Início</span><input type="time" id="kInicio" value="${base.inicio}"></label>
+        <label class="campo"><span>Término</span><input type="time" id="kFim" value="${fim}"></label>
+      </div>
+      <div class="duplo">
+        <label class="campo"><span>Local</span><input type="text" id="kLocal" value="${escapar(base.local || '')}" placeholder="Ex.: Clínica São Lucas"></label>
+        <label class="campo"><span>Com quem</span><input type="text" id="kCom" value="${escapar(base.com || '')}" placeholder="Ex.: Dra. Helena"></label>
+      </div>
+      <label class="campo">
+        <span>Avisar quantos minutos antes</span>
+        <input type="number" id="kAvisar" min="0" max="720" step="5" value="${base.avisar}">
+      </label>
+      <label class="campo">
+        <span>Observação (opcional)</span>
+        <input type="text" id="kObs" value="${escapar(base.obs || '')}" placeholder="Ex.: levar exames anteriores">
+      </label>
+      ${novo ? `
+      <div class="campo">
+        <span>Repetir nos dias da semana</span>
+        <div class="dias-semana" id="kDias">${diasBotoes}</div>
+      </div>
+      <label class="campo"><span>Repetir até</span><input type="date" id="kAte" value="${somarDias(base.data, 28)}"></label>
+      <p class="fraco">Sem nenhum dia marcado, o compromisso fica só na data escolhida.</p>` : ''}
+      ${!novo && comp.serie ? `
+      <label class="linha-opcao"><input type="checkbox" id="kSerie"><span>Aplicar também aos próximos desta série</span></label>` : ''}
+    `,
+    acoes: [
+      { texto: novo ? 'Marcar' : 'Salvar', tipo: 'primario', aoClicar: m => salvarCompromisso(m, comp) },
+      { texto: 'Cancelar', aoClicar: () => fecharModal() }
+    ]
+  });
+
+  const caixaDias = document.getElementById('kDias');
+  if (caixaDias) {
+    caixaDias.addEventListener('click', e => {
+      const d = e.target.closest('.dia-semana');
+      if (d) d.classList.toggle('marcado');
+    });
+  }
+}
+
+function salvarCompromisso(m, comp) {
+  const titulo = m.querySelector('#kTitulo').value.trim();
+  const tipo = m.querySelector('#kTipo').value.trim() || 'Compromisso';
+  const data = m.querySelector('#kData').value || dataSelecionada;
+  const inicio = m.querySelector('#kInicio').value || '09:00';
+  const fim = m.querySelector('#kFim').value || '';
+  const local = m.querySelector('#kLocal').value.trim();
+  const com = m.querySelector('#kCom').value.trim();
+  const obs = m.querySelector('#kObs').value.trim();
+  const avisar = Math.max(0, Number(m.querySelector('#kAvisar').value) || 0);
+
+  if (!titulo) { aviso('Dê um nome ao compromisso.'); return; }
+  if (!fim || paraMin(fim) <= paraMin(inicio)) {
+    aviso('O término precisa ser depois do início, no mesmo dia.');
+    return;
+  }
+  const duracao = paraMin(fim) - paraMin(inicio);
+  const campos = { titulo, tipo, data, inicio, duracao, local, com, obs, avisar };
+
+  let alvo;
+  if (comp) {
+    const aplicarSerie = m.querySelector('#kSerie')?.checked;
+    Object.assign(comp, campos);
+    zerarAvisosCompromisso(comp);
+    if (aplicarSerie && comp.serie) {
+      // a data é a única coisa que não se repete na série
+      const { data: _, ...semData } = campos;
+      estado.compromissos
+        .filter(c => c.serie === comp.serie && c.data > comp.data && c.situacao === 'marcado')
+        .forEach(c => { Object.assign(c, semData); zerarAvisosCompromisso(c); });
+    }
+    alvo = comp;
+    aviso('Compromisso atualizado.');
+  } else {
+    const marcados = [...m.querySelectorAll('.dia-semana.marcado')].map(d => Number(d.dataset.dia));
+    const ate = m.querySelector('#kAte').value;
+    const datas = gerarDatas(data, marcados, ate, data);
+    const serie = datas.length > 1 ? uid() : null;
+    datas.forEach(d => { alvo = criarCompromisso({ ...campos, data: d, serie }); });
+    aviso(datas.length > 1 ? `Compromisso marcado em ${datas.length} dias.` : 'Compromisso marcado.');
+  }
+
+  salvar();
+  dataSelecionada = data;
+  fecharModal();
+  renderTudo();
+
+  const choques = conflitos({ ...campos, situacao: 'marcado' }, tarefasDoDia(data));
+  if (choques.length) {
+    aviso(`Esse horário choca com ${choques.map(t => t.titulo).join(', ')}. Ajuste a rotina se precisar — o app não move nada sozinho.`, 7000);
+  }
+}
+
+function mudarSituacao(c, situacao) {
+  c.situacao = situacao;
+  if (situacao === 'marcado') zerarAvisosCompromisso(c);
+  else c.avisos = { pre: true, inicio: true }; // encerrado: não avisa mais
+  salvar();
+  renderTudo();
+  const textos = { realizado: 'Compromisso marcado como realizado.', cancelado: 'Compromisso cancelado.', marcado: 'Compromisso de volta para “marcado”.' };
+  aviso(textos[situacao]);
+}
+
+function confirmarExclusaoCompromisso(c) {
+  const acoes = [{
+    texto: 'Excluir só este', tipo: 'perigo',
+    aoClicar: () => { removerCompromisso(c.id); salvar(); fecharModal(); renderTudo(); aviso('Compromisso excluído.'); }
+  }];
+  if (c.serie) {
+    acoes.push({
+      texto: 'Excluir este e os próximos da série', tipo: 'perigo',
+      aoClicar: () => { removerSerieCompromissos(c.serie, c.data); salvar(); fecharModal(); renderTudo(); aviso('Série de compromissos excluída a partir desta data.'); }
+    });
+  }
+  acoes.push({ texto: 'Cancelar', aoClicar: () => fecharModal() });
+  abrirModal({
+    titulo: 'Excluir compromisso',
+    subtitulo: `${escapar(c.titulo)} · ${dataCurta(c.data)} às ${c.inicio}`,
+    corpo: '<p class="fraco">Se ele só não vai mais acontecer, prefira marcar como “Cancelado” — assim o histórico fica registrado.</p>',
+    acoes
+  });
 }
 
 /* ================= IMPREVISTO ================= */
@@ -674,11 +921,14 @@ function renderCalendario() {
     if (iso === hoje) classe.push('hoje');
     if (iso === dataSelecionada) classe.push('selecionada');
 
+    const comps = compromissosDoDia(iso).filter(c => c.situacao !== 'cancelado');
     let marcador = '';
     if (lista.length) {
       const tipo = feitas === lista.length ? 'ponto-cheio' : feitas > 0 ? 'ponto-parcial' : 'ponto-vazio';
-      marcador = `<span class="ponto ${tipo}"></span><span class="mini">${feitas}/${lista.length}</span>`;
+      marcador = `<span class="ponto ${tipo}"></span>`;
     }
+    if (comps.length) marcador += `<span class="ponto ponto-compromisso" title="${comps.length} compromisso(s)"></span>`;
+    if (lista.length) marcador += `<span class="mini">${feitas}/${lista.length}</span>`;
     html += `<div class="${classe.join(' ')}" data-data="${iso}"><b>${d.getDate()}</b><div class="pontos">${marcador}</div></div>`;
   }
   $('#gradeMes').innerHTML = html;
@@ -706,6 +956,11 @@ function renderRelatorio() {
 
   const maior = Math.max(1, ...r.porCategoria.map(c => c.realizado));
 
+  const compSemana = ordenarCompromissosDaSemana(r.dias);
+  const compAtivos = compSemana.filter(c => c.situacao !== 'cancelado');
+  const minutosComp = compAtivos.reduce((s, c) => s + c.duracao, 0);
+  const porTipo = resumoPorTipo(compSemana);
+
   const html = `
     <div class="cartao">
       <h2>Resumo da semana</h2>
@@ -720,6 +975,31 @@ function renderRelatorio() {
         ${r.atrasoMedio != null ? ` · check-in médio ${r.atrasoMedio >= 0 ? formatarDuracao(r.atrasoMedio) + ' depois' : formatarDuracao(-r.atrasoMedio) + ' antes'} do previsto` : ''}
         ${r.desvioMedio != null ? ` · duração real ${r.desvioMedio >= 0 ? formatarDuracao(r.desvioMedio) + ' acima' : formatarDuracao(-r.desvioMedio) + ' abaixo'} da estimativa` : ''}
       </p>
+    </div>
+
+    <div class="cartao">
+      <h2>Compromissos da semana</h2>
+      ${compSemana.length ? `
+      <div class="grade-numeros">
+        <div class="bloco-resumo"><b>${compAtivos.length}</b><span>Compromissos</span></div>
+        <div class="bloco-resumo"><b>${formatarHoras(minutosComp)}</b><span>Ocupados</span></div>
+        <div class="bloco-resumo"><b>${compSemana.filter(c => c.situacao === 'realizado').length}</b><span>Aconteceram</span></div>
+        <div class="bloco-resumo"><b>${compSemana.filter(c => c.situacao === 'cancelado').length}</b><span>Cancelados</span></div>
+      </div>
+      <table style="margin-top:10px">
+        <thead><tr><th>Quando</th><th>Compromisso</th><th class="num">Duração</th></tr></thead>
+        <tbody>
+          ${compSemana.map(c => `
+            <tr>
+              <td>${nomeDia(c.data).slice(0, 3)} ${dataCurta(c.data)} · ${c.inicio}</td>
+              <td>${escapar(c.titulo)}<br><span class="fraco">${escapar(c.tipo)}${c.situacao !== 'marcado' ? ' · ' + SITUACOES[c.situacao] : ''}${c.local ? ' · ' + escapar(c.local) : ''}</span></td>
+              <td class="num">${formatarDuracao(c.duracao)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      ${porTipo.length > 1 ? `<p class="fraco" style="margin-top:10px">${porTipo.map(t => `${escapar(t.nome)}: ${formatarHoras(t.minutos)}`).join(' · ')}</p>` : ''}
+      <p class="fraco" style="margin-top:10px">Compromissos não entram nas contas de aderência da rotina — eles têm hora marcada por outra pessoa.</p>
+      ` : '<p class="fraco">Nenhum compromisso nesta semana.</p>'}
     </div>
 
     <div class="cartao">
@@ -763,6 +1043,12 @@ function renderRelatorio() {
   $('#conteudoRelatorio').innerHTML = html;
 }
 
+function ordenarCompromissosDaSemana(dias) {
+  return estado.compromissos
+    .filter(c => dias.includes(c.data))
+    .sort((a, b) => (a.data + a.inicio).localeCompare(b.data + b.inicio));
+}
+
 /* ================= AJUSTES ================= */
 
 function renderAjustes() {
@@ -773,6 +1059,7 @@ function renderAjustes() {
   $('#cfgLimite').value = c.limite;
   $('#cfgAutoRecalculo').checked = c.autoRecalculo;
   $('#cfgDuracaoMinima').value = c.duracaoMinima;
+  $('#cfgAvisoCompromisso').value = c.avisoCompromisso;
 
   const p = permissao();
   $('#estadoPermissao').textContent =
@@ -782,8 +1069,9 @@ function renderAjustes() {
     'Notificações ainda não autorizadas — toque em “Ativar alertas”.';
 
   const total = estado.tarefas.length;
-  const dias = new Set(estado.tarefas.map(t => t.data)).size;
-  $('#infoArmazenamento').textContent = `${total} atividade(s) em ${dias} dia(s) guardadas neste aparelho.`;
+  const dias = new Set([...estado.tarefas, ...estado.compromissos].map(t => t.data)).size;
+  $('#infoArmazenamento').textContent =
+    `${total} atividade(s) e ${estado.compromissos.length} compromisso(s) em ${dias} dia(s), guardados neste aparelho.`;
 }
 
 function atualizarBotaoPermissao() {
@@ -884,11 +1172,43 @@ function verificarAlertas(agoraData) {
     }
   }
 
+  if (avisarCompromissos(hoje, agora, som)) mudou = true;
+
   const pendentes = pendenciasAbertas();
   if (pendentes.length) piscarTitulo(`(${pendentes.length}) Pendência — Rotina`);
   else pararTitulo();
 
   if (mudou) salvar();
+  return mudou;
+}
+
+/* Compromisso avisa antes e na hora — e só. Não vira pendência nem cobra
+   check-in: quem marca a hora é outra pessoa, não a rotina. */
+function avisarCompromissos(hoje, agora, som) {
+  let mudou = false;
+
+  for (const c of ordenarCompromissos(compromissosDoDia(hoje))) {
+    if (c.situacao !== 'marcado') continue;
+    const ini = paraMin(c.inicio);
+    const onde = c.local ? ` · ${c.local}` : '';
+
+    if (!c.avisos.pre && c.avisar > 0 && agora >= ini - c.avisar && agora < ini) {
+      c.avisos.pre = true; mudou = true;
+      disparar(`Compromisso em ${formatarDuracao(ini - agora)}`,
+        `${c.titulo} às ${c.inicio}${onde}.`, 'comp-pre-' + c.id, som && 'aviso');
+    }
+
+    if (!c.avisos.inicio && agora >= ini) {
+      c.avisos.pre = true;
+      c.avisos.inicio = true;
+      mudou = true;
+      // se o app passou horas fechado, não adianta alarmar um horário que já foi
+      if (agora < ini + 30) {
+        disparar('Compromisso agora', `${c.titulo}${onde}.`, 'comp-ini-' + c.id, som && 'inicio', true);
+      }
+    }
+  }
+
   return mudou;
 }
 
@@ -996,17 +1316,22 @@ function renderAgora() {
   const hoje = hojeIso();
   const agora = minutosAgora();
   const lista = ordenarPorInicio(tarefasDoDia(hoje));
+  const compromissos = compromissosDoDia(hoje);
   const painel = $('#painelAgora');
   const texto = $('#agoraTexto');
 
   const pendente = lista.find(t => ['aguardando_checkin', 'aguardando_checkout'].includes(t.status))
     || pendenciasAbertas()[0];
   const rodando = lista.find(t => t.status === 'em_andamento');
+  const compAgora = acontecendoAgora(compromissos, agora);
 
   if (pendente) {
     texto.textContent = pendente.status === 'aguardando_checkin'
       ? `Check-in pendente: ${pendente.titulo} (previsto ${pendente.inicio}${pendente.data !== hoje ? ' · ' + dataCurta(pendente.data) : ''})`
       : `Check-out pendente: ${pendente.titulo}`;
+    painel.classList.add('pulsando');
+  } else if (compAgora) {
+    texto.textContent = `${compAgora.tipo}: ${compAgora.titulo} · até ${paraHora(fimCompromisso(compAgora))}${compAgora.local ? ' · ' + compAgora.local : ''}`;
     painel.classList.add('pulsando');
   } else if (rodando) {
     const restam = fimPrevisto(rodando) - agora;
@@ -1016,9 +1341,19 @@ function renderAgora() {
     painel.classList.add('pulsando');
   } else {
     const proxima = lista.find(t => t.status === 'planejada' && paraMin(t.inicio) >= agora);
-    texto.textContent = proxima
-      ? `Próxima: ${proxima.titulo} às ${proxima.inicio} (em ${formatarDuracao(paraMin(proxima.inicio) - agora)})`
-      : lista.length ? 'Dia encerrado — nada pendente.' : 'Nenhuma atividade programada para hoje.';
+    const proxComp = proximoCompromisso(compromissos, agora);
+    // mostra o que vier primeiro, seja rotina ou compromisso
+    const antesDoComp = proxima && (!proxComp || paraMin(proxima.inicio) <= paraMin(proxComp.inicio));
+
+    if (proxima && antesDoComp) {
+      texto.textContent = `Próxima: ${proxima.titulo} às ${proxima.inicio} (em ${formatarDuracao(paraMin(proxima.inicio) - agora)})`;
+    } else if (proxComp) {
+      texto.textContent = `Próximo compromisso: ${proxComp.titulo} às ${proxComp.inicio} (em ${formatarDuracao(paraMin(proxComp.inicio) - agora)})`;
+    } else {
+      texto.textContent = (lista.length || compromissos.length)
+        ? 'Dia encerrado — nada pendente.'
+        : 'Nenhuma atividade programada para hoje.';
+    }
     painel.classList.remove('pulsando');
   }
 }

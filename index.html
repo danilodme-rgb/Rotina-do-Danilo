@@ -54,6 +54,7 @@
 
     <div class="acoes-dia">
       <button class="btn btn-primario" id="btnNova">+ Nova atividade</button>
+      <button class="btn" id="btnCompromisso">+ Compromisso</button>
       <button class="btn" id="btnImprevisto">Imprevisto</button>
       <button class="btn" id="btnRecalcular">Recalcular</button>
       <button class="btn btn-fantasma" id="btnCopiarDia">Copiar dia</button>
@@ -61,7 +62,8 @@
 
     <p class="aviso-passado fraco" id="avisoPassado" hidden>
       Dia já encerrado: não dá para programar atividades no passado. Você ainda pode
-      consultar o histórico, resolver check-in/check-out em aberto e copiar este dia para os próximos.
+      consultar o histórico, resolver check-in/check-out em aberto, copiar este dia para os
+      próximos e registrar um compromisso que aconteceu.
     </p>
 
     <ul class="lista-tarefas" id="listaTarefas"></ul>
@@ -82,6 +84,7 @@
       <span class="ponto ponto-cheio"></span> tudo concluído
       <span class="ponto ponto-parcial"></span> parcial
       <span class="ponto ponto-vazio"></span> nada feito
+      <span class="ponto ponto-compromisso"></span> compromisso
     </p>
   </section>
 
@@ -114,6 +117,11 @@
         <input type="checkbox" id="cfgRepetir">
         <span>Insistir a cada 10 min enquanto houver check-in/check-out pendente</span>
       </label>
+      <label class="campo">
+        <span>Avisar dos compromissos quantos minutos antes</span>
+        <input type="number" id="cfgAvisoCompromisso" min="0" max="720" step="5">
+      </label>
+      <p class="fraco">Vale para os compromissos novos; cada um pode ter a sua própria antecedência.</p>
       <p class="fraco" id="estadoPermissao"></p>
     </div>
 
@@ -139,6 +147,7 @@
         <li>Com o app aberto (mesmo em outra aba), os avisos de 5 minutos antes, de início e de término chegam como notificação do sistema.</li>
         <li>Com o app fechado, o navegador não dispara alarmes. Por isso, ao reabrir, o app pergunta o que aconteceu com cada atividade em aberto.</li>
         <li>Nada de check-in ou check-out se perde: a atividade fica esperando a sua resposta e continua cobrando.</li>
+        <li>Compromissos (reunião, consulta, exame) avisam antes e na hora, mas não pedem check-in nem entram no recálculo — a hora deles é fixa.</li>
         <li>Instale o app na tela de início (Adicionar à tela de início / Instalar) para abrir rápido e funcionar offline.</li>
       </ul>
     </div>

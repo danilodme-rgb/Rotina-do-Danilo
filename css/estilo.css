@@ -101,6 +101,9 @@ main{max-width:760px;margin:0 auto;padding:14px}
 
 /* ===== Resumo do dia ===== */
 .resumo-dia{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+/* com o bloco de compromissos são quatro: no celular vira 2x2 para o rótulo caber */
+.resumo-dia.quatro{grid-template-columns:repeat(2,1fr)}
+@media(min-width:520px){.resumo-dia.quatro{grid-template-columns:repeat(4,1fr)}}
 .bloco-resumo{
   background:var(--superficie);border:1px solid var(--borda);border-radius:var(--raio-p);
   padding:10px;text-align:center;
@@ -136,6 +139,16 @@ main{max-width:760px;margin:0 auto;padding:14px}
 .chip-destaque{background:var(--branco);color:#111;border-color:var(--branco);font-weight:600}
 .chip-alerta{background:#2a2a31;color:var(--branco);border-color:#54545f}
 .acoes-tarefa{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+
+/* ===== Compromissos (hora marcada) =====
+   Faixa lateral listrada na vertical para separar do plano da rotina. */
+.tarefa.compromisso{background:var(--superficie-2);border-style:dashed}
+.tarefa.compromisso::before{background:repeating-linear-gradient(180deg,#e6e6ea 0 6px,#4a4a55 6px 12px)}
+.tarefa.compromisso[data-situacao="cancelado"]{opacity:.5}
+.tarefa.compromisso[data-situacao="cancelado"] .info h3{text-decoration:line-through;text-decoration-color:var(--texto-fraco)}
+.tarefa.compromisso[data-situacao="realizado"]::before{background:#5c5c66}
+.chip-compromisso{background:#26262d;color:var(--branco);border-color:#5b5b67;font-weight:600}
+.chip-conflito{background:#3a2c2c;color:#f0d6d6;border-color:#5c4040}
 .acoes-tarefa .btn{padding:6px 10px;font-size:13px}
 .vazio{
   text-align:center;color:var(--texto-fraco);padding:34px 14px;
@@ -161,6 +174,7 @@ main{max-width:760px;margin:0 auto;padding:14px}
 .ponto-cheio{background:var(--branco)}
 .ponto-parcial{background:#77777f}
 .ponto-vazio{background:#3d3d45}
+.ponto-compromisso{background:transparent;border:2px solid var(--branco);width:8px;height:8px}
 .mini{font-size:10px;color:var(--texto-fraco)}
 .legenda{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:var(--texto-fraco);font-size:12px;margin-top:14px}
 
