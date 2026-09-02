@@ -14,9 +14,10 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
 
 <!-- inicio-geral -->
 
-> **Bloco geral copiado de `instrucoes@3305d0d`.** Não editar aqui: regra nova entra
+> **Bloco geral copiado de `instrucoes@5877970`.** Não editar aqui: regra nova entra
 > primeiro em `danilodme-rgb/instrucoes` e volta para cá por cópia. Cópia diferente da
 > fonte, atualizo esta antes de trabalhar.
+
 ## 1. Como responder
 
 1. **Toda decisão vem com uma recomendação.** Nunca apresentar opções sem dizer qual eu
@@ -136,6 +137,13 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
     intermediário legítimo precisa de **nome próprio** — "ok no que rodou" não é "tudo ok",
     "pendente" não é "falhou". E aviso que se repete sem que exista ação possível também morre:
     quem avisa entrega junto a evidência para agir.
+12h. **Regra que cria aviso precisa da regra que o apaga.** Aviso, alerta e etiqueta gerados
+    por regra são cópia de um fato — quando o fato muda, a cópia continua lá dizendo o que
+    era. Toda regra de criação nasce com a de retirada, e ela roda no mesmo gatilho da
+    criação. E texto com "hoje", "agora" ou "novo" **mostra a data quando não é de hoje**:
+    sem o carimbo, o recado de dias atrás se disfarça de recado de agora. Caso real: um app
+    avisava "o pai está na cidade hoje" num dia de folga; a mãe corrigiu o calendário para
+    trabalho e o recado ficou semanas no rodapé, contradizendo a própria tela.
 
 ## 4. Evitar retrabalho
 
@@ -169,6 +177,12 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
     lição (16b), a pergunta seguinte é **o que a cobra sozinha** — um teste, uma verificação no
     build, um passo de CI. ⚠ E maquinário só vale **ligado**: arquivo presente e não registrado
     na configuração é trava desligada, e parece protegida.
+16e. **Trava que confere uma lista escrita à mão só confere quem está na lista.** Alvo novo —
+    repositório, arquivo, rota, ambiente — nasce fora dela, e a trava fica verde por não ter
+    procurado (8c). O padrão se inverte: a trava **descobre os alvos sozinha** e cobra todos;
+    quem fica de fora vai escrito, com o motivo. E ela precisa saber quando **não conseguiu ver
+    tudo** — uma consulta de controle que sabidamente traria resultado — senão alcance reduzido
+    passa por varredura completa.
 
 ## 5. Economia de token
 

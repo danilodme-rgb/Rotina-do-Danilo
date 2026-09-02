@@ -52,6 +52,22 @@ da execução e o artefato não chegam a uma sessão de nuvem (o host do artefat
 de rede, `CONNECT tunnel failed, 403`). Publicar só no canal mais completo é publicar para quem
 menos precisa.
 
+**Trava que compara o repositório com um mundo externo reprova por CONSTRUÇÃO quando roda em
+`pull_request`.** Se a fonte da verdade mora aqui e as cópias moram noutros repositórios, o PR que
+muda a fonte deixa, no ato, todas as cópias diferentes — e não há como ser diferente, porque elas só
+podem ser atualizadas depois do merge. Medido neste repositório: a conferência das cópias ficava
+vermelha em todo PR que encostasse no bloco geral. A correção não é liberar: é dar **nome próprio**
+ao estado intermediário (regra 12e), comparando também com a **base do PR** — cópia que bate com a
+base é `PENDENTE` (este PR a desatualiza, ninguém podia ter feito melhor), cópia que não bate nem
+com a base é `ATRASADO` e reprova como sempre. ⚠ E a janela tem de ser provada nos **dois**
+sentidos: só ver o `PENDENTE` aparecer não distingue a janela legítima de uma anistia geral que
+matou a trava.
+
+**Conferência que só roda onde a rede existe não roda.** A parte de rede de uma trava é a que o
+autoteste não alcança — e é justamente aí que ela vira "deve funcionar". Recebendo o baixador por
+parâmetro, o caminho inteiro (ler a base, cair para o modo estrito quando a base não vem) se prova
+offline, em segundos, em qualquer máquina.
+
 ## Git
 
 **Merge por squash quebra o teste de ancestralidade.** O commit da branch **nunca** vira ancestral,
