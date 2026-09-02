@@ -102,6 +102,13 @@ de `remote`, e o programa chamado responde algo como "não é um comando" — qu
 credencial, `curl` devolve 200 e `fetch` devolve 403. Não trocar `curl` por `fetch` "para tirar uma
 dependência".
 
+**E o `fetch` do Node lê conteúdo velho onde o `curl` já lê o novo.** Medido em 02/09/2026, no
+mesmo arquivo de `raw.githubusercontent.com` segundos depois de um push: `curl` trouxe 8715 bytes,
+`fetch` trouxe 7801 — a versão anterior. Nem `Cache-Control: no-cache`, nem `Pragma`, nem
+parâmetro de query furaram o cache do `fetch`; o `curl` nunca precisou. O estrago é pior que uma
+leitura errada: uma trava que compara arquivo remoto acusa **atrasado** quem está em dia, e aviso
+que mente vira aviso ignorado (regra 12e). Trava que lê arquivo publicado lê por `curl`.
+
 **Caminho absoluto escrito à mão num script versionado só roda numa máquina.** Medido em
 02/09/2026: um gerador de PDF trazia `/home/user/Projeto-Azambuja-Team-OS/...` em três lugares
 (os documentos de entrada, o arquivo de saída e o executável do Chromium). Em qualquer outro
