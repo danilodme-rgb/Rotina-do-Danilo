@@ -54,11 +54,27 @@ instalar como aplicativo.
 > É preciso servir por `http://` ou `https://` (não abrir o arquivo direto pelo
 > `file://`), porque o app usa módulos JavaScript e service worker.
 
-O repositório traz o workflow `.github/workflows/pages.yml`, que republica o
-site a cada push na `main`. Para usá-lo, deixe **Settings → Pages → Source**
+O repositório traz o workflow `.github/workflows/pages.yml`, que confere o site
+e só então republica a cada push na `main`. Para usá-lo, deixe **Settings → Pages → Source**
 como **GitHub Actions**. Se preferir o modo simples, escolha **Deploy from a
 branch** (`main` / `root`) e apague o workflow — os dois caminhos publicam o
 mesmo site.
+
+## Conferência antes de publicar
+
+O app não tem build nem teste automatizado, então existe uma conferência de fumaça que roda em
+todo pull request e antes de cada publicação:
+
+```bash
+node scripts/conferir.mjs
+```
+
+Ela reprova erro de sintaxe em qualquer `.js`, JSON ou manifesto inválido e arquivo citado no
+`index.html`, no `sw.js` ou num `import` que não exista. `node scripts/conferir.mjs --autoteste`
+roda a mesma conferência contra cópias sabotadas de propósito e exige que ela reprove cada uma —
+é o que prova que ela detecta falha, e não só que ela passa.
+
+Publicar arquivo quebrado é publicar com sucesso: o job `publicar` só roda depois do `conferir`.
 
 ## Estrutura
 
@@ -73,6 +89,7 @@ mesmo site.
 | `js/notificacoes.js` | Notificações do sistema e som |
 | `js/interface.js` | Modais e avisos na tela |
 | `sw.js` | Funcionamento offline e clique na notificação |
+| `scripts/conferir.mjs` | Conferência de fumaça, com autoteste por sabotagem |
 
 ## Limitação honesta sobre notificações
 

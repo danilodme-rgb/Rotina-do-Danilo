@@ -1,0 +1,29 @@
+name: Conferência
+
+# Roda no PR, nao so' depois do merge: vermelho depois do merge e' noticia,
+# nao trava. Roda tambem na main, porque o deploy do Pages sai dali.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar o Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # O autoteste sabota cópias do próprio app e exige que a conferência
+      # reprove cada uma. Sem ele, "passou" não prova que ela detecta falha.
+      - name: Conferir o app (com autoteste da própria conferência)
+        run: node scripts/conferir.mjs --autoteste

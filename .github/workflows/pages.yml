@@ -17,7 +17,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Publicar arquivo quebrado e' publicar com sucesso: o Pages nao olha o que
+  # esta dentro. Esta trava e' o que impede o app de ir ao ar com a tela branca.
+  conferir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+      - name: Preparar o Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Conferir o app (com autoteste da própria conferência)
+        run: node scripts/conferir.mjs --autoteste
+
   publicar:
+    needs: conferir
     runs-on: ubuntu-latest
     environment:
       name: github-pages
