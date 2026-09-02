@@ -23,6 +23,15 @@ usar o falso sai à rede. Converter com `cygpath -u` e conferir com `command -v`
 
 ## GitHub Actions
 
+**A bateria que lê `process.env` responde diferente na sua máquina e no runner.** Um caso que
+consultava `GITHUB_REPOSITORY` — variável que só existe no Actions — passou verde local e reprovou
+no runner, por um motivo que nada tinha a ver com o que ele media; e como o sabotador compara
+árvore limpa com árvore sabotada, ele acusou "a bateria não detecta a sabotagem" quando o defeito
+era o caso ambiental. Medido em 02/09/2026. Todo caso recebe o ambiente **por parâmetro**; quem
+precisa da variável a define e a restaura ali mesmo. Vale igual para chamada de rede escondida num
+valor padrão de parâmetro: `f(x, y = chamaARede())` sai à internet no teste que você jurou ser
+offline.
+
 **Todo passo já nasce com `-e` ligado.** O Actions invoca `bash --noprofile --norc -eo pipefail`.
 Escrever `set -uo pipefail` liga `-u` e `pipefail` e **não desliga** o `-e` herdado: um código de
 saída 1 esperado (por exemplo "há pendência") mata o passo antes da sua própria lógica de decisão.

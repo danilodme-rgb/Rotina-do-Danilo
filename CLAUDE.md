@@ -14,7 +14,7 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
 
 <!-- inicio-geral -->
 
-> **Bloco geral copiado de `instrucoes@a957be5`.** Não editar aqui: regra nova entra
+> **Bloco geral copiado de `instrucoes@01d9ed3`.** Não editar aqui: regra nova entra
 > primeiro em `danilodme-rgb/instrucoes` e volta para cá por cópia. Cópia diferente da
 > fonte, atualizo esta antes de trabalhar.
 
