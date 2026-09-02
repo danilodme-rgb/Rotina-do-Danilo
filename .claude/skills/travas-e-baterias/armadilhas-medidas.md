@@ -105,18 +105,15 @@ dependência".
 **E o `fetch` do Node lê conteúdo velho onde o `curl` já lê o novo.** Medido em 02/09/2026, no
 mesmo arquivo de `raw.githubusercontent.com` segundos depois de um push: `curl` trouxe 8715 bytes,
 `fetch` trouxe 7801 — a versão anterior. Nem `Cache-Control: no-cache`, nem `Pragma`, nem
-parâmetro de query furaram o cache do `fetch`; o `curl` nunca precisou. O estrago é pior que uma
-leitura errada: uma trava que compara arquivo remoto acusa **atrasado** quem está em dia, e aviso
-que mente vira aviso ignorado (regra 12e). Trava que lê arquivo publicado lê por `curl`.
+parâmetro de query furaram o cache do `fetch`; o `curl` nunca precisou.
 
-**Caminho absoluto escrito à mão num script versionado só roda numa máquina.** Medido em
-02/09/2026: um gerador de PDF trazia `/home/user/Projeto-Azambuja-Team-OS/...` em três lugares
-(os documentos de entrada, o arquivo de saída e o executável do Chromium). Em qualquer outro
-clone — incluindo o mesmo repositório clonado com outra grafia de nome — ele morria com
-`FileNotFoundError`, e o PDF antigo continuava no lugar parecendo atual. Caminho sai da
-localização do próprio arquivo; executável de fora se **procura** (variável de ambiente, depois
-`PATH`, depois os caminhos conhecidos) e, não achando, **para e diz o que falta**. É a regra 13b
-com a 10b junto.
+**E `raw.githubusercontent.com` guarda o arquivo por 5 minutos, para todo mundo.** Medido no mesmo
+dia: com o push já feito, o `raw` devolvia 8715 bytes e a API de conteúdo
+(`/repos/OWNER/REPO/contents/CAMINHO?ref=BRANCH`, com `Accept: application/vnd.github.raw`)
+devolvia os 9296 corretos. O estrago é pior que uma leitura errada: **uma trava que roda em push e
+lê pelo `raw` acusa "atrasado" quem acabou de ficar em dia**, e aviso que mente vira aviso ignorado
+(regra 12e). Trava que compara arquivo publicado lê pela API, por `curl` — e com `GITHUB_TOKEN` no
+ambiente, para não bater no limite de 60 chamadas por hora.
 
 ## Escrita de arquivo e texto
 
