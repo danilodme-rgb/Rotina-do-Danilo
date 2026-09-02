@@ -102,6 +102,15 @@ de `remote`, e o programa chamado responde algo como "não é um comando" — qu
 credencial, `curl` devolve 200 e `fetch` devolve 403. Não trocar `curl` por `fetch` "para tirar uma
 dependência".
 
+**Caminho absoluto escrito à mão num script versionado só roda numa máquina.** Medido em
+02/09/2026: um gerador de PDF trazia `/home/user/Projeto-Azambuja-Team-OS/...` em três lugares
+(os documentos de entrada, o arquivo de saída e o executável do Chromium). Em qualquer outro
+clone — incluindo o mesmo repositório clonado com outra grafia de nome — ele morria com
+`FileNotFoundError`, e o PDF antigo continuava no lugar parecendo atual. Caminho sai da
+localização do próprio arquivo; executável de fora se **procura** (variável de ambiente, depois
+`PATH`, depois os caminhos conhecidos) e, não achando, **para e diz o que falta**. É a regra 13b
+com a 10b junto.
+
 ## Escrita de arquivo e texto
 
 **Cerca de bloco de código não se resolve alterando o conteúdo.** Conteúdo com crases triplas
