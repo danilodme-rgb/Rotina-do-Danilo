@@ -107,6 +107,13 @@ mesmo arquivo de `raw.githubusercontent.com` segundos depois de um push: `curl` 
 `fetch` trouxe 7801 — a versão anterior. Nem `Cache-Control: no-cache`, nem `Pragma`, nem
 parâmetro de query furaram o cache do `fetch`; o `curl` nunca precisou.
 
+**A API do GitHub devolve 404 tanto para arquivo ausente quanto para branch ausente.** São
+coisas muito diferentes — "não adotou" e "estou olhando para o lugar errado" — e a trava que
+confunde as duas dá diagnóstico errado com cara de certeza, mandando a pessoa caçar um problema
+que não existe. Medido em 02/09/2026: o branch tinha sido incorporado e apagado, e a conferência
+acusou o projeto de não ter o arquivo. O corpo da resposta distingue (`No commit found for the
+ref`); reprovar não basta, o **autoteste tem de exigir a mensagem certa**, não só o vermelho.
+
 **E `raw.githubusercontent.com` guarda o arquivo por 5 minutos, para todo mundo.** Medido no mesmo
 dia: com o push já feito, o `raw` devolvia 8715 bytes e a API de conteúdo
 (`/repos/OWNER/REPO/contents/CAMINHO?ref=BRANCH`, com `Accept: application/vnd.github.raw`)
