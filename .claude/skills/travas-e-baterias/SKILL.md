@@ -75,6 +75,19 @@ parâmetro de destino, não o nome de quem chamou. Nome novo escapa de lista; da
 **Declarar o alcance.** O que a trava deliberadamente **não** cobre vai escrito ao lado do que
 ela cobre. Buraco declarado é decisão; buraco silencioso é defeito esperando.
 
+**Só cobrar o que este repositório pode corrigir.** Conferência que reclama de arquivo copiado de
+outro projeto — uma skill, um bloco de regras, uma dependência versionada — pede uma correção que
+não pode ser feita aqui. A pessoa não tem como obedecer, aprende a ignorar, e o vermelho morre
+(regra 12e). Medido em 02/09/2026: uma checagem de markdown apontou 21 problemas, **20 deles** em
+arquivos que eram cópia e um em documento de verdade. Escopo restrito ao que é do projeto: 21
+viraram zero, e a sabotagem continuou sendo pega.
+
+**A trava e o que ela protege não podem ter duas definições do mesmo fato.** Se o gerador sabe
+achar o navegador e a conferência também "sabe", são duas listas — e elas divergem no primeiro
+ajuste, calando a trava ou fazendo-a reprovar quem está certo. Uma definição só, num lugar só, que
+os dois chamam. Cuidado com o preço de importar: se o módulo que tem a função faz o trabalho
+inteiro ao ser importado, a função sai para um módulo próprio.
+
 **Mensagem de bloqueio é texto de produto** (regra 12 do bloco geral). Ela aparece no pior momento
 possível — quando a pessoa está barrada. Nada de numeração interna, referência a arquivo de outro
 projeto, ou instrução que ela não consegue executar naquele ambiente.
