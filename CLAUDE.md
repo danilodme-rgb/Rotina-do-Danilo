@@ -14,7 +14,7 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
 
 <!-- inicio-geral -->
 
-> **Bloco geral copiado de `instrucoes@01d9ed3`.** Não editar aqui: regra nova entra
+> **Bloco geral copiado de `instrucoes@361bc7e`.** Não editar aqui: regra nova entra
 > primeiro em `danilodme-rgb/instrucoes` e volta para cá por cópia. Cópia diferente da
 > fonte, atualizo esta antes de trabalhar.
 
@@ -82,6 +82,12 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
    lado que vai estourar depois, eu digo agora. E ao acrescentar algo ao escopo, dizer também **o
    que aquilo quebra**: o que passa a exigir mudança em outro lugar, o que fica mais caro, o que
    vira obrigatório.
+9c. **Entregar é publicar, não commitar.** Código na branch e PR aberto não são entrega: a
+   pessoa usa o endereço, não o repositório. A publicação sai automática a partir do branch
+   padrão, sem passo manual meu nem dele, e no fim eu digo o endereço público e o que ainda
+   depende dele — ligar uma opção, dar merge, aprovar. Não consegui conferir que publicou?
+   Digo isso, em vez de presumir que deu certo (8b).
+
 10. **Testes e build do projeto verdes antes de qualquer push.** Sem exceção. Se o projeto
     ainda não tem esses comandos, dizer isso em vez de pular a verificação.
 10b. **Proteção que não consegue rodar tem de falhar FECHADA.** Faltando o que ela precisa
@@ -98,6 +104,15 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
     não recarregava nada no navegador. E a ferramenta de teste também mente sobre o
     ambiente: o "modo offline" do Playwright não vale para as requisições do service
     worker — o teste honesto foi derrubar o servidor.
+11f. **O que já está instalado se atualiza sozinho.** Quem já abriu o app recebe a mudança sem
+    reinstalar, sem limpar cache e sem apertar nada. Senão a correção de hoje não chega em
+    ninguém — e o pior é que ninguém percebe, porque a tela antiga continua funcionando. Cache
+    é reserva para uso offline, nunca fonte principal: a rede vem primeiro. E não existe um
+    cache só — o cache HTTP da hospedagem entrega a versão anterior mesmo quando o código já
+    pede a nova. Caso real: um PWA no GitHub Pages precisou das duas coisas juntas, rede
+    primeiro no service worker e `cache: 'no-store'` na busca, porque o Pages manda
+    `Cache-Control: max-age=600` e sozinha nenhuma das duas resolvia.
+
 11e. **O dado que volta de um serviço de fora não é o que você mandou.** Banco, API e fila
     normalizam o que recebem — array vazio some, campo nulo some, número vira string. Trate
     tudo que volta como entrada não confiável e normalize na porta de entrada, senão um
