@@ -14,9 +14,11 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
 
 <!-- inicio-geral -->
 
-> **Bloco geral copiado de `instrucoes@87a1582`.** Não editar aqui: regra nova entra
+> **Bloco geral copiado de `instrucoes@5609d56`.** Não editar aqui: regra nova entra
 > primeiro em `danilodme-rgb/instrucoes` e volta para cá por cópia. Cópia diferente da
 > fonte, atualizo esta antes de trabalhar.
+
+
 
 
 
@@ -122,7 +124,9 @@ anexar (rede fora, acesso negado), tudo bem — a cópia abaixo é completa e va
     provar: os três ensinam a pessoa a descontar o sinal, e sinal descontado é sinal morto.
     Estado intermediário legítimo precisa de **nome próprio** — "ok no que rodou" não é "tudo
     ok", "pendente" não é "falhou". Aviso que se repete sem ação possível também morre: quem
-    avisa entrega junto a evidência para agir.
+    avisa entrega junto a evidência para agir. **Estado novo precisa ser ensinado a todas as
+    travas que o observam**, não só a quem o criou: senão a segunda reprova o que a primeira
+    acabou de fazer certo, e o vermelho aparece justamente quando o maquinário funcionou.
 12f. **Dado pessoal entra no desenho no primeiro dia, nunca "a gente vê depois".** Vale mais
     ainda para dado de criança, de saúde e de imagem. Log de erro **jamais** carrega dado
     pessoal. Texto jurídico sai sempre com a ressalva de que precisa de advogado.
