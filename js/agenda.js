@@ -65,9 +65,6 @@ export function formatarDuracao(min) {
   return `${m}min`;
 }
 
-export function formatarHoras(min) {
-  return (Math.max(0, min) / 60).toFixed(1).replace('.', ',') + 'h';
-}
 
 /* ===== Tarefa ===== */
 
@@ -83,10 +80,24 @@ export function duracaoReal(t) {
   return d;
 }
 
+/**
+ * Quanto a atividade foi PLANEJADA para durar.
+ *
+ * `t.duracao` não serve: o recálculo proporcional a reescreve quando o dia
+ * aperta, e o botão "+15 min" também. Comparar o tempo real com ela é comparar
+ * com o que o app decidiu depois — o relatório acusa "120% do planejado" quem
+ * fez exatamente a hora que tinha marcado. O que o Danilo escolheu está em
+ * `duracaoOriginal`, e é ela a régua de tudo que se chama "planejado".
+ */
+export function duracaoPlanejada(t) {
+  const d = Number(t.duracaoOriginal);
+  return Number.isFinite(d) && d > 0 ? d : t.duracao;
+}
+
 /* Minutos efetivamente dedicados: real quando existe, senão o planejado */
 export function minutosContados(t) {
   const real = duracaoReal(t);
-  return real != null ? real : t.duracao;
+  return real != null ? real : duracaoPlanejada(t);
 }
 
 export function ordenarPorInicio(lista) {

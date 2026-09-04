@@ -16,4 +16,14 @@ estado normal, não falha. O que ela impede é a lição sumir sem ninguém ver.
 
 ## Abertas
 
-_(nenhuma no momento)_
+- [ ] **Número que a pessoa lê declara a régua — e a régua nunca é um campo que outra rotina
+  reescreve.** O app comprimia sozinho a duração planejada e o relatório media contra o campo
+  comprimido: quem cumpriu exatamente o combinado aparecia como "120% do planejado", com o
+  número idêntico ao de quem de fato estourou. Métrica tirada de campo mutável mede a última
+  mutação, não o combinado. O que a pessoa escolheu precisa de campo próprio, e é ele a régua —
+  vale para prazo, meta, orçamento e qualquer "planejado x realizado". (04/09/2026)
+- [ ] **Números lado a lado têm de fechar entre si na tela, não só na conta.** "1,0h" e "120%"
+  na mesma linha pareciam contradição porque cada um arredondava de um jeito — a conta estava
+  certa e a tela dizia que não. Onde dois números se dividem um pelo outro à vista da pessoa,
+  a precisão mostrada tem de permitir refazer a divisão. E toda coluna de número diz **de que**
+  é a porcentagem: "%" e "Cumprido" não dizem. (04/09/2026)

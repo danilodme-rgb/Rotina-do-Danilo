@@ -2,8 +2,8 @@
 
 import {
   paraMin, paraHora, minutosAgora, hojeIso, isoDe, dataDeIso, somarDias,
-  dataExtenso, dataCurta, nomeMes, nomeDia, inicioSemana, formatarDuracao, formatarHoras,
-  fimPrevisto, duracaoReal, minutosContados, ordenarPorInicio, planejarRestante, pad2
+  dataExtenso, dataCurta, nomeMes, nomeDia, inicioSemana, formatarDuracao,
+  fimPrevisto, duracaoReal, minutosContados, duracaoPlanejada, ordenarPorInicio, planejarRestante, pad2
 } from './agenda.js';
 
 import {
@@ -140,7 +140,7 @@ function renderDia() {
   $('#avisoPassado').hidden = !passado;
 
   const lista = ordenarPorInicio(tarefasDoDia(iso));
-  const planejado = lista.reduce((s, t) => s + t.duracao, 0);
+  const planejado = lista.reduce((s, t) => s + duracaoPlanejada(t), 0);
   const feito = lista.filter(t => t.status === 'concluida');
   const realizado = feito.reduce((s, t) => s + minutosContados(t), 0);
   const pct = planejado ? Math.round((realizado / planejado) * 100) : 0;
@@ -695,11 +695,11 @@ function renderRelatorio() {
     <div class="linha-barra">
       <div class="linha-barra-topo">
         <b>${escapar(x.nome)}</b>
-        <span>${formatarHoras(x.realizado)} · ${x.pctDoTotal.toFixed(1).replace('.', ',')}%</span>
+        <span>${formatarDuracao(x.realizado)} · ${x.pctDoTotal.toFixed(1).replace('.', ',')}% do tempo</span>
       </div>
       <div class="barra"><i style="width:${total ? Math.max(2, (x.realizado / total) * 100) : 0}%"></i></div>
       <div class="linha-barra-topo" style="margin-top:4px">
-        <span class="fraco">planejado ${formatarHoras(x.planejado)} · cumprido ${Math.round(x.pctCumprido)}%</span>
+        <span class="fraco">planejado ${formatarDuracao(x.planejado)} · ${Math.round(x.pctCumprido)}% do planejado</span>
         <span class="fraco">${x.concluidas}/${x.sessoes} atividades</span>
       </div>
     </div>`;
@@ -710,9 +710,9 @@ function renderRelatorio() {
     <div class="cartao">
       <h2>Resumo da semana</h2>
       <div class="grade-numeros">
-        <div class="bloco-resumo"><b>${formatarHoras(r.totalRealizado)}</b><span>Realizado</span></div>
-        <div class="bloco-resumo"><b>${formatarHoras(r.totalPlanejado)}</b><span>Planejado</span></div>
-        <div class="bloco-resumo"><b>${Math.round(r.aderencia)}%</b><span>Aderência</span></div>
+        <div class="bloco-resumo"><b>${formatarDuracao(r.totalRealizado)}</b><span>Realizado</span></div>
+        <div class="bloco-resumo"><b>${formatarDuracao(r.totalPlanejado)}</b><span>Planejado</span></div>
+        <div class="bloco-resumo"><b>${Math.round(r.aderencia)}%</b><span>Do planejado</span></div>
         <div class="bloco-resumo"><b>${r.qtdConcluidas}/${r.qtdTotal}</b><span>Concluídas</span></div>
       </div>
       <p class="fraco" style="margin-top:10px">
@@ -731,17 +731,23 @@ function renderRelatorio() {
       <h2>Por atividade</h2>
       ${r.porAtividade.length ? `
       <table>
-        <thead><tr><th>Atividade</th><th class="num">Horas</th><th class="num">%</th><th class="num">Cumprido</th></tr></thead>
+        <thead><tr><th>Atividade</th><th class="num">Tempo · planejado</th><th class="num">Do tempo</th><th class="num">Do planejado</th></tr></thead>
         <tbody>
           ${r.porAtividade.map(a => `
             <tr>
               <td>${escapar(a.nome)}</td>
-              <td class="num">${formatarHoras(a.realizado)}</td>
+              <td class="num">${formatarDuracao(a.realizado)} <span class="fraco">· ${formatarDuracao(a.planejado)}</span></td>
               <td class="num">${a.pctDoTotal.toFixed(1).replace('.', ',')}%</td>
               <td class="num">${Math.round(a.pctCumprido)}%</td>
             </tr>`).join('')}
         </tbody>
-      </table>` : '<p class="fraco">Sem dados nesta semana.</p>'}
+      </table>
+      <p class="fraco" style="margin-top:8px">
+        <b>Tempo</b> é o que você gastou de verdade, do check-in ao check-out.
+        <b>Do tempo</b> é a fatia dessa atividade na semana.
+        <b>Do planejado</b> compara o tempo gasto com o que você tinha marcado — acima de 100% é
+        porque durou mais do que o combinado.
+      </p>` : '<p class="fraco">Sem dados nesta semana.</p>'}
     </div>
 
     <div class="cartao">
@@ -752,8 +758,8 @@ function renderRelatorio() {
           ${r.porDia.map(d => `
             <tr>
               <td>${nomeDia(d.data).slice(0, 3)} ${dataCurta(d.data)}</td>
-              <td class="num">${formatarHoras(d.realizado)}</td>
-              <td class="num">${formatarHoras(d.planejado)}</td>
+              <td class="num">${formatarDuracao(d.realizado)}</td>
+              <td class="num">${formatarDuracao(d.planejado)}</td>
               <td class="num">${d.concluidas}/${d.total}</td>
             </tr>`).join('')}
         </tbody>

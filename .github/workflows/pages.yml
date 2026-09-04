@@ -30,6 +30,8 @@ jobs:
           node-version: '22'
       - name: Conferir o app (com autoteste da própria conferência)
         run: node scripts/conferir.mjs --autoteste
+      - name: Bateria de comportamento (com autoteste da própria bateria)
+        run: node scripts/testes.mjs --autoteste
 
   publicar:
     needs: conferir

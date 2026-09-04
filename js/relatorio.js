@@ -1,11 +1,15 @@
 /* ===== Relatório semanal ===== */
 
-import { somarDias, minutosContados, duracaoReal, paraMin } from './agenda.js';
+import { somarDias, minutosContados, duracaoReal, duracaoPlanejada, paraMin } from './agenda.js';
 
 /**
  * Consolida a semana que começa em `isoSegunda` (7 dias).
  * Traz totais em minutos, percentuais por categoria e por atividade,
  * além de aderência ao planejado e pontualidade.
+ *
+ * Régua do "planejado": `duracaoPlanejada`, nunca `t.duracao` — ver o comentário
+ * dela em agenda.js. O relatório mede o dia contra o que foi combinado, não
+ * contra o que o recálculo automático deixou no lugar.
  */
 export function relatorioSemana(tarefas, isoSegunda) {
   const dias = Array.from({ length: 7 }, (_, i) => somarDias(isoSegunda, i));
@@ -16,14 +20,14 @@ export function relatorioSemana(tarefas, isoSegunda) {
   const emAberto = daSemana.filter(t => ['planejada', 'aguardando_checkin', 'em_andamento', 'aguardando_checkout'].includes(t.status));
 
   const totalRealizado = concluidas.reduce((s, t) => s + minutosContados(t), 0);
-  const totalPlanejado = daSemana.reduce((s, t) => s + t.duracao, 0);
+  const totalPlanejado = daSemana.reduce((s, t) => s + duracaoPlanejada(t), 0);
 
   const agrupar = (lista, chave) => {
     const mapa = new Map();
     lista.forEach(t => {
       const k = (typeof chave === 'function' ? chave(t) : t[chave]) || 'Sem categoria';
       const atual = mapa.get(k) || { nome: k, realizado: 0, planejado: 0, sessoes: 0, concluidas: 0 };
-      atual.planejado += t.duracao;
+      atual.planejado += duracaoPlanejada(t);
       atual.sessoes += 1;
       if (t.status === 'concluida') { atual.realizado += minutosContados(t); atual.concluidas += 1; }
       mapa.set(k, atual);
@@ -45,7 +49,7 @@ export function relatorioSemana(tarefas, isoSegunda) {
     const feito = doDia.filter(t => t.status === 'concluida');
     return {
       data: iso,
-      planejado: doDia.reduce((s, t) => s + t.duracao, 0),
+      planejado: doDia.reduce((s, t) => s + duracaoPlanejada(t), 0),
       realizado: feito.reduce((s, t) => s + minutosContados(t), 0),
       total: doDia.length,
       concluidas: feito.length
@@ -60,7 +64,7 @@ export function relatorioSemana(tarefas, isoSegunda) {
 
   // Precisão da estimativa: real x previsto nas concluídas
   const desvios = concluidas
-    .map(t => { const r = duracaoReal(t); return r == null ? null : r - t.duracao; })
+    .map(t => { const r = duracaoReal(t); return r == null ? null : r - duracaoPlanejada(t); })
     .filter(v => v != null);
   const desvioMedio = desvios.length ? desvios.reduce((s, v) => s + v, 0) / desvios.length : null;
 
