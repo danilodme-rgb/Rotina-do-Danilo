@@ -220,28 +220,34 @@ Para não redescobrir a cada sessão.
 
 ## A conferência — o que existe e o que não existe
 
-Este projeto **não tem teste e não tem build**. O que ele tem é o piso da seção 0 da skill
-`travas-e-baterias` (`.claude/skills/`), montado em 02/09/2026:
+Este projeto **não tem build**. O que ele tem são duas travas, feitas com a receita da skill
+`travas-e-baterias` (`.claude/skills/`) — a conferência de fumaça em 02/09/2026, a bateria de
+comportamento em 04/09/2026:
 
 ```bash
-node scripts/conferir.mjs              # a conferência
-node scripts/conferir.mjs --autoteste  # + a prova de que ela reprova de verdade
+node scripts/conferir.mjs --autoteste  # os arquivos abrem  (+ prova que ela reprova)
+node scripts/testes.mjs --autoteste    # as contas fecham   (+ prova que ela reprova)
 ```
 
-Ela confere três coisas: sintaxe de módulo em todo `.js`, o manifesto e todo `.json` parseando,
-e todo arquivo citado no `index.html`, no `sw.js` e nos `import` dos módulos existindo de fato.
+- **`conferir.mjs`** — sintaxe de módulo em todo `.js`, o manifesto e todo `.json` parseando,
+  todo arquivo citado no `index.html`, no `sw.js` e nos `import` existindo de fato, e **toda
+  trava de `scripts/` registrada em todo workflow que roda travas** (a lista de travas ela
+  descobre sozinha; escrita à mão, script novo nasceria fora dela).
+- **`testes.mjs`** — 18 casos das contas de tempo e do relatório semanal: a régua do planejado,
+  compressão proporcional ponta a ponta, virada de meia-noite, semana vazia, desvio e atraso
+  médios. Mudou o número de casos? Atualize `CASOS_ESPERADOS` **e** esta linha.
 
-**Ela está ligada em dois lugares** — copiar o arquivo não liga nada, quem liga é o registro:
+**As duas estão ligadas em dois lugares cada** — copiar o arquivo não liga nada, quem liga é o
+registro (e é isso que a parte 4 da `conferir.mjs` cobra sozinha):
 
 | Onde | Quando | Para quê |
 |---|---|---|
 | `.github/workflows/conferir.yml` | em todo PR e em push na `main` | pegar o defeito antes do merge |
 | `.github/workflows/pages.yml` (job `conferir`) | antes de publicar | `publicar` tem `needs: conferir`: **reprovou, não vai ao ar** |
 
-**Buraco declarado:** a conferência é de fumaça, não de comportamento. Ela não abre o app, não
-roda o service worker e não prova nenhuma conta da agenda — o recálculo proporcional, o
-relatório semanal e o fluxo de check-in continuam sem teste nenhum. Bateria de verdade é o
-próximo passo, e a receita está na skill.
+**Buraco declarado:** nada disso abre o app. Tela, service worker, `localStorage`, notificação e
+o fluxo de check-in continuam sem prova automática — só rodando de verdade
+(`python3 -m http.server 8000`). Mudança visual continua exigindo print (regra 11).
 
 ## Armadilhas já pagas
 
@@ -253,6 +259,17 @@ próximo passo, e a receita está na skill.
   a tela fica branca e o job do Pages continua verde — publicar arquivo quebrado é publicar com
   sucesso. Por isso o `publicar` depende do `conferir`, e não é um workflow separado torcendo
   para alguém olhar.
+- **`t.duracao` não é o que foi planejado — é o que o app decidiu por último.** O recálculo
+  proporcional reescreve esse campo quando o dia aperta, e o botão "+15 min" também. O relatório
+  media contra ele: uma atividade de 1h comprimida para 50min e feita na hora cheia aparecia como
+  **"cumprido 120%"** — o app acusava de estourar justamente quem cumpriu o combinado. Pior, o
+  número saía idêntico ao de quem realmente estourou, então a tela não distinguia os dois casos.
+  A régua do que se chama "planejado" é `duracaoPlanejada(t)` (ou seja, `duracaoOriginal`, o que
+  o Danilo escolheu), em **toda** conta: relatório, resumo do dia, desvio e atraso médios.
+- **`formatarHoras` escondia a diferença que a porcentagem mostrava.** "1,0h" era qualquer coisa
+  entre 57 e 63 minutos, então "1,0h" ao lado de "120%" parecia contradição mesmo quando a conta
+  estava certa. O relatório usa `formatarDuracao` (`50min`, `1h`, `1h 3min`) e a função antiga
+  saiu do código.
 - **Alerta com o app fechado não existe** e isso não é defeito a corrigir: sem servidor de push,
   o navegador não dispara alarme nenhum. O contrato do app é outro — nada é dado como feito sem
   check-in, nada é encerrado sem check-out, e na reabertura ele pergunta uma a uma as pendências

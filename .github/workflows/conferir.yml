@@ -27,3 +27,8 @@ jobs:
       # reprove cada uma. Sem ele, "passou" não prova que ela detecta falha.
       - name: Conferir o app (com autoteste da própria conferência)
         run: node scripts/conferir.mjs --autoteste
+
+      # A conferência acima só prova que os arquivos abrem. As contas do
+      # relatório são provadas aqui — também com autoteste, pelo mesmo motivo.
+      - name: Bateria de comportamento (com autoteste da própria bateria)
+        run: node scripts/testes.mjs --autoteste

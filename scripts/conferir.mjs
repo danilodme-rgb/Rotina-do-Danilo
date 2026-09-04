@@ -9,12 +9,13 @@
 // O que ela cobre:
 //   1. todo .js e .mjs passa na checagem de sintaxe de MODULO;
 //   2. todo .json e o manifesto parseiam;
-//   3. todo arquivo citado no index.html, no sw.js e nos `import` dos modulos existe.
+//   3. todo arquivo citado no index.html, no sw.js e nos `import` dos modulos existe;
+//   4. toda trava de scripts/ esta REGISTRADA nos workflows que rodam travas.
 //
 // O que ela NAO cobre (buraco declarado, nao esquecido): comportamento. Ela nao
-// abre o app, nao roda o service worker e nao prova conta nenhuma da agenda.
-// Bateria de teste de verdade e' o proximo passo, e a receita esta na skill
-// `travas-e-baterias`, em .claude/skills/.
+// abre o app e nao roda o service worker. As contas do relatorio e do tempo sao
+// provadas em scripts/testes.mjs; tela, cache e notificacao continuam sem prova
+// automatica -- so' rodando o app de verdade.
 //
 // Uso:  node scripts/conferir.mjs
 //       node scripts/conferir.mjs --autoteste   (prova que ela reprova de verdade)
@@ -41,7 +42,7 @@ function arquivos(dir = RAIZ, achados = []) {
 }
 
 const problemas = [];
-const contagem = { sintaxe: 0, json: 0, referencias: 0 };
+const contagem = { sintaxe: 0, json: 0, referencias: 0, registro: 0 };
 const rel = (p) => relative(RAIZ, p).split(sep).join("/");
 const reprova = (arquivo, motivo) => problemas.push(`${rel(arquivo)}: ${motivo}`);
 
@@ -98,10 +99,47 @@ for (const arquivo of TODOS.filter((f) => /\.m?js$/.test(f))) {
   if (lista) for (const m of lista[1].matchAll(/['"]([^'"]+)['"]/g)) conferirAlvo(arquivo, m[1], RAIZ);
 }
 
+// -------------------------------------------------------- 4. travas ligadas
+// Arquivo presente nao e' trava ligada: quem liga e' o registro no workflow, e
+// esquecer o registro nao da' sinal nenhum. A lista de travas se DESCOBRE
+// (scripts/*.mjs) em vez de ser escrita a mao -- script novo nasceria fora de
+// uma lista escrita e ficaria verde por ninguem ter procurado.
+const dirScripts = join(RAIZ, "scripts");
+const travas = existsSync(dirScripts)
+  ? readdirSync(dirScripts).filter((n) => n.endsWith(".mjs")).sort()
+  : [];
+
+const dirFluxos = join(RAIZ, ".github", "workflows");
+const fluxos = existsSync(dirFluxos)
+  ? readdirSync(dirFluxos).filter((n) => /\.ya?ml$/.test(n)).sort()
+      .map((n) => ({ nome: n, texto: readFileSync(join(dirFluxos, n), "utf8") }))
+  : [];
+
+// "Porta" e' o workflow que ja' roda alguma trava -- decidido pelo conteudo,
+// nunca por nome de arquivo: renomear o workflow nao pode apagar a exigencia.
+// Quem ja' roda uma trava tem de rodar todas, senao a que ficou de fora nao
+// pega o defeito justamente no caminho onde ela importava.
+const portas = fluxos.filter((f) => f.texto.includes("node scripts/"));
+
+for (const porta of portas) {
+  for (const trava of travas) {
+    contagem.registro++;
+    if (!porta.texto.includes(`scripts/${trava}`))
+      problemas.push(
+        `.github/workflows/${porta.nome}: nao roda scripts/${trava}. ` +
+        `A trava existe no repositorio e esta desligada neste caminho.`
+      );
+  }
+}
+if (travas.length && !portas.length)
+  problemas.push(
+    `Ha ${travas.length} trava(s) em scripts/ e nenhum workflow que rode alguma. Tudo desligado.`
+  );
+
 // ------------------------------------------------------------ falha fechada
 // Resultado vazio nao e' prova de ausencia (regra 8c): se uma categoria nao
 // achou nada, quem falhou foi a conferencia, nao o codigo.
-const MINIMO = { sintaxe: 5, json: 1, referencias: 5 };
+const MINIMO = { sintaxe: 5, json: 1, referencias: 5, registro: 2 };
 for (const [nome, minimo] of Object.entries(MINIMO)) {
   if (contagem[nome] < minimo)
     problemas.push(
@@ -119,6 +157,7 @@ if (process.argv[2] === "--autoteste") {
     ["manifest.webmanifest", (t) => t.replace("{", "{,"), "JSON invalido"],
     ["index.html", (t) => t.replace('src="js/app.js"', 'src="js/nao-existe.js"'), "arquivo citado que sumiu"],
     ["sw.js", (t) => t.replace("'./js/app.js'", "'./js/tambem-nao-existe.js'"), "arquivo sumido na lista do service worker"],
+    [".github/workflows/conferir.yml", (t) => t.replace("scripts/testes.mjs", "scripts/conferir.mjs"), "trava presente no repositorio e desligada no workflow"],
   ];
   let falhas = 0;
   for (const [alvo, sabotar, descricao] of sabotagens) {
@@ -156,5 +195,6 @@ if (problemas.length) {
 
 console.log(
   `Conferencia de fumaca passou: ${contagem.sintaxe} arquivo(s) de codigo, ` +
-  `${contagem.json} de dados, ${contagem.referencias} referencia(s) conferidas.`
+  `${contagem.json} de dados, ${contagem.referencias} referencia(s) e ` +
+  `${contagem.registro} registro(s) de trava conferidos.`
 );
