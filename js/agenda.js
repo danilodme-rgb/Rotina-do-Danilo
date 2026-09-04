@@ -100,6 +100,25 @@ export function minutosContados(t) {
   return real != null ? real : duracaoPlanejada(t);
 }
 
+/**
+ * Datas de uma repeticao semanal: a data base mais todo dia da semana marcado
+ * ate' `ate` (inclusive a propria base). Sem dia marcado, sem `ate`, ou `ate`
+ * que nao passa da base, devolve so' a base -- nunca uma lista vazia.
+ * Datas ja' passadas ficam de fora: nao se programa para tras.
+ */
+export function gerarDatas(dataBase, diasSemana, ate) {
+  if (!diasSemana.length || !ate || ate <= dataBase) return [dataBase];
+  const piso = hojeIso();
+  const datas = new Set([dataBase]);
+  let cursor = dataBase;
+  let guarda = 0;
+  while (cursor < ate && guarda++ < 800) {
+    cursor = somarDias(cursor, 1);
+    if (diasSemana.includes(dataDeIso(cursor).getDay())) datas.add(cursor);
+  }
+  return [...datas].filter(d => d >= piso).sort();
+}
+
 export function ordenarPorInicio(lista) {
   return [...lista].sort((a, b) => {
     const ia = a.inicioReal != null ? paraMin(a.inicioReal) : paraMin(a.inicio);

@@ -3,7 +3,8 @@
 import {
   paraMin, paraHora, minutosAgora, hojeIso, isoDe, dataDeIso, somarDias,
   dataExtenso, dataCurta, nomeMes, nomeDia, inicioSemana, formatarDuracao,
-  fimPrevisto, duracaoReal, minutosContados, duracaoPlanejada, ordenarPorInicio, planejarRestante, pad2
+  fimPrevisto, duracaoReal, minutosContados, duracaoPlanejada, ordenarPorInicio, planejarRestante,
+  gerarDatas, pad2
 } from './agenda.js';
 
 import {
@@ -21,6 +22,8 @@ let mesVisivel = { ano: new Date().getFullYear(), mes: new Date().getMonth() };
 let semanaSelecionada = inicioSemana(hojeIso());
 let filaPendencias = [];
 let processandoFila = false;
+
+const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 const ROTULOS = {
   planejada: 'Planejada',
@@ -400,7 +403,7 @@ function formularioTarefa(tarefa) {
     obs: ''
   };
   const listaCat = categorias().map(c => `<option value="${escapar(c)}"></option>`).join('');
-  const diasBotoes = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const diasBotoes = DIAS_CURTOS
     .map((d, i) => `<span class="dia-semana" data-dia="${i}">${d}</span>`).join('');
 
   abrirModal({
@@ -429,8 +432,14 @@ function formularioTarefa(tarefa) {
         <span>Repetir nos dias da semana</span>
         <div class="dias-semana" id="fDias">${diasBotoes}</div>
       </div>
-      <label class="campo"><span>Repetir até</span><input type="date" id="fAte" min="${base.data}" value="${somarDias(base.data, 28)}"></label>
-      <p class="fraco">Sem nenhum dia marcado, a atividade fica só em ${dataCurta(base.data)}.</p>` : ''}
+      <div class="campo" id="fCampoAte" hidden>
+        <span>Repetir até</span>
+        <div class="campo-com-botao">
+          <input type="date" id="fAte" min="${somarDias(base.data, 1)}">
+          <button type="button" class="btn btn-fantasma" id="fLimparAte">Limpar</button>
+        </div>
+      </div>
+      <p class="fraco" id="fResumoRepeticao"></p>` : ''}
       ${!novo && tarefa.serie ? `
       <label class="linha-opcao"><input type="checkbox" id="fSerie"><span>Aplicar também aos próximos dias desta série</span></label>` : ''}
     `,
@@ -441,12 +450,51 @@ function formularioTarefa(tarefa) {
   });
 
   const caixaDias = document.getElementById('fDias');
-  if (caixaDias) {
-    caixaDias.addEventListener('click', e => {
-      const d = e.target.closest('.dia-semana');
-      if (d) d.classList.toggle('marcado');
-    });
-  }
+  if (!caixaDias) return;
+
+  const campoAte = document.getElementById('fCampoAte');
+  const campoData = document.getElementById('fAte');
+  const resumo = document.getElementById('fResumoRepeticao');
+
+  // O "Repetir até" nasce VAZIO e só aparece depois que algum dia da semana e'
+  // marcado. Data chutada por padrao e' um combinado que ninguem pediu, e o
+  // proprio CSS tira o botao de limpar do controle nativo -- por isso o botao
+  // "Limpar" ao lado. E o resumo diz, em voz alta, o que vai ser criado: dia
+  // marcado sem data nao pode virar uma atividade so' em silencio.
+  const atualizarRepeticao = () => {
+    const marcados = [...caixaDias.querySelectorAll('.dia-semana.marcado')].map(d => Number(d.dataset.dia));
+    campoAte.hidden = !marcados.length;
+
+    if (!marcados.length) {
+      resumo.textContent = `Sem nenhum dia marcado, a atividade fica só em ${dataCurta(base.data)}.`;
+      return;
+    }
+    const nomes = marcados.sort((a, b) => a - b).map(d => DIAS_CURTOS[d].toLowerCase());
+    const lista = nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1] : nomes[0];
+
+    if (!campoData.value) {
+      resumo.textContent = `Repetindo ${lista}. Escolha até quando.`;
+      return;
+    }
+    const datas = gerarDatas(base.data, marcados, campoData.value);
+    resumo.textContent = datas.length > 1
+      ? `Vai programar ${datas.length} atividades: ${lista}, de ${dataCurta(base.data)} até ${dataCurta(campoData.value)}.`
+      : `Só em ${dataCurta(base.data)}: até ${dataCurta(campoData.value)} não cai nenhum ${lista}.`;
+  };
+
+  caixaDias.addEventListener('click', e => {
+    const d = e.target.closest('.dia-semana');
+    if (!d) return;
+    d.classList.toggle('marcado');
+    atualizarRepeticao();
+  });
+  campoData.addEventListener('change', atualizarRepeticao);
+  campoData.addEventListener('input', atualizarRepeticao);
+  document.getElementById('fLimparAte').addEventListener('click', () => {
+    campoData.value = '';
+    atualizarRepeticao();
+  });
+  atualizarRepeticao();
 }
 
 function salvarFormulario(m, tarefa) {
@@ -481,6 +529,9 @@ function salvarFormulario(m, tarefa) {
   } else {
     const marcados = [...m.querySelectorAll('.dia-semana.marcado')].map(d => Number(d.dataset.dia));
     const ate = m.querySelector('#fAte').value;
+    // Dia marcado sem data ate' criava uma atividade so', calado: a pessoa
+    // marcava "seg, qua e sex" e levava um dia. Falha fechada, com o que falta.
+    if (marcados.length && !ate) { aviso('Escolha até quando repetir — ou desmarque os dias da semana.'); return; }
     const datas = gerarDatas(dataSelecionada, marcados, ate);
     const serie = datas.length > 1 ? uid() : null;
     datas.forEach(data => criarTarefa({
@@ -493,19 +544,6 @@ function salvarFormulario(m, tarefa) {
 
   fecharModal();
   renderTudo();
-}
-
-function gerarDatas(dataBase, diasSemana, ate) {
-  if (!diasSemana.length || !ate || ate <= dataBase) return [dataBase];
-  const piso = hojeIso();
-  const datas = new Set([dataBase]);
-  let cursor = dataBase;
-  let guarda = 0;
-  while (cursor < ate && guarda++ < 800) {
-    cursor = somarDias(cursor, 1);
-    if (diasSemana.includes(dataDeIso(cursor).getDay())) datas.add(cursor);
-  }
-  return [...datas].filter(d => d >= piso).sort();
 }
 
 function confirmarExclusao(t) {
@@ -602,7 +640,7 @@ function aplicarImprevisto(m) {
 function fluxoCopiarDia() {
   const lista = tarefasDoDia(dataSelecionada);
   if (!lista.length) { aviso('Este dia não tem atividades para copiar.'); return; }
-  const diasBotoes = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const diasBotoes = DIAS_CURTOS
     .map((d, i) => `<span class="dia-semana" data-dia="${i}">${d}</span>`).join('');
 
   abrirModal({

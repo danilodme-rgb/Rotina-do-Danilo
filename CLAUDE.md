@@ -233,9 +233,11 @@ node scripts/testes.mjs --autoteste    # as contas fecham   (+ prova que ela rep
   todo arquivo citado no `index.html`, no `sw.js` e nos `import` existindo de fato, e **toda
   trava de `scripts/` registrada em todo workflow que roda travas** (a lista de travas ela
   descobre sozinha; escrita à mão, script novo nasceria fora dela).
-- **`testes.mjs`** — 18 casos das contas de tempo e do relatório semanal: a régua do planejado,
-  compressão proporcional ponta a ponta, virada de meia-noite, semana vazia, desvio e atraso
-  médios. Mudou o número de casos? Atualize `CASOS_ESPERADOS` **e** esta linha.
+- **`testes.mjs`** — 23 casos das contas de tempo, do relatório semanal e das datas de
+  repetição: a régua do planejado, compressão proporcional ponta a ponta, virada de meia-noite,
+  semana vazia, desvio e atraso médios, e o `gerarDatas` (dia marcado sem data limite, data que
+  não passa da base, nunca programar para trás). Mudou o número de casos? Atualize
+  `CASOS_ESPERADOS` **e** esta linha.
 
 **As duas estão ligadas em dois lugares cada** — copiar o arquivo não liga nada, quem liga é o
 registro (e é isso que a parte 4 da `conferir.mjs` cobra sozinha):
@@ -270,6 +272,20 @@ o fluxo de check-in continuam sem prova automática — só rodando de verdade
   entre 57 e 63 minutos, então "1,0h" ao lado de "120%" parecia contradição mesmo quando a conta
   estava certa. O relatório usa `formatarDuracao` (`50min`, `1h`, `1h 3min`) e a função antiga
   saiu do código.
+- **Campo de data com valor padrão vira um combinado que ninguém fez — e o CSS tirou a saída.**
+  O "Repetir até" do formulário nascia com `hoje + 28 dias` preenchido, sem nenhum dia da semana
+  marcado: a tela dizia "repete até 02/10" enquanto o texto logo abaixo dizia "fica só em 04/09",
+  e o app fazia o segundo. Pior, não dava para apagar: o `-webkit-appearance:none` que conserta a
+  largura do `input[type=date]` no celular **apaga junto o "x" de limpar** que o Chrome desenha.
+  Campo opcional nasce vazio; se ele aceita valor, precisa de um botão "Limpar" nosso do lado.
+- **Marcar dias da semana sem escolher "Repetir até" criava uma atividade só, calado.**
+  `gerarDatas` devolve só a data base quando falta o limite — comportamento certo para a função,
+  silêncio errado para a pessoa, que marcava "seg, qua e sex" e levava um dia. Agora o formulário
+  bloqueia e diz o que falta, e um resumo vivo mostra quantas atividades vão nascer antes de
+  apertar o botão.
+- **`gerarDatas` mora em `js/agenda.js`, não no `app.js`.** Lógica pura de data no `app.js` não
+  tem como ser testada: aquele arquivo mexe no DOM e não carrega no Node. Regra prática — conta
+  que dá para provar sem navegador vai para `agenda.js`, e a bateria alcança.
 - **Alerta com o app fechado não existe** e isso não é defeito a corrigir: sem servidor de push,
   o navegador não dispara alarme nenhum. O contrato do app é outro — nada é dado como feito sem
   check-in, nada é encerrado sem check-out, e na reabertura ele pergunta uma a uma as pendências

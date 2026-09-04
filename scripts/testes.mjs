@@ -33,11 +33,11 @@ const RAIZ = join(AQUI, "..");
 // qualquer codigo daqui rodar, e a bateria some em vez de reprovar -- sem
 // contagem, sem frase, so' um rastro de pilha que ninguem liga ao produto.
 // Aqui ela morre falando: codigo 2, "nem chegou a rodar".
-let duracaoPlanejada, duracaoReal, minutosContados, planejarRestante,
-    inicioSemana, paraMin, paraHora, formatarDuracao, relatorioSemana;
+let duracaoPlanejada, duracaoReal, minutosContados, planejarRestante, gerarDatas,
+    inicioSemana, paraMin, paraHora, formatarDuracao, hojeIso, somarDias, relatorioSemana;
 try {
-  ({ duracaoPlanejada, duracaoReal, minutosContados, planejarRestante,
-     inicioSemana, paraMin, paraHora, formatarDuracao } = await import("../js/agenda.js"));
+  ({ duracaoPlanejada, duracaoReal, minutosContados, planejarRestante, gerarDatas,
+     inicioSemana, paraMin, paraHora, formatarDuracao, hojeIso, somarDias } = await import("../js/agenda.js"));
   ({ relatorioSemana } = await import("../js/relatorio.js"));
 } catch (e) {
   console.log("A BATERIA NEM CHEGOU A RODAR: os modulos do app nao carregaram.\n  " + e.message);
@@ -45,8 +45,8 @@ try {
   process.exit(2);
 }
 for (const [nome, fn] of Object.entries({
-  duracaoPlanejada, duracaoReal, minutosContados, planejarRestante,
-  inicioSemana, paraMin, paraHora, formatarDuracao, relatorioSemana
+  duracaoPlanejada, duracaoReal, minutosContados, planejarRestante, gerarDatas,
+  inicioSemana, paraMin, paraHora, formatarDuracao, hojeIso, somarDias, relatorioSemana
 })) {
   if (typeof fn !== "function") {
     console.log(`A BATERIA NEM CHEGOU A RODAR: "${nome}" nao veio dos modulos do app.`);
@@ -58,7 +58,7 @@ for (const [nome, fn] of Object.entries({
 // Contar o que EXECUTOU, nao so' as falhas: bateria que conta so' falha nao
 // distingue "todos passaram" de "quase nenhum chegou a rodar".
 // Mudou o numero de proposito? Atualize aqui E no CLAUDE.md.
-const CASOS_ESPERADOS = 18;
+const CASOS_ESPERADOS = 23;
 let casos = 0;
 const falhas = [];
 
@@ -282,6 +282,48 @@ caso("formatarDuracao nao arredonda a diferenca para longe", () => {
   igual(formatarDuracao(63), "1h 3min", "63 minutos");
 });
 
+// ---- 5. repeticao semanal do formulario ----------------------------------
+// Datas relativas a hoje de proposito: caso com data fixa passa a medir o
+// relogio da maquina assim que a data escolhida vira passado.
+
+caso("sem dia da semana marcado, a atividade fica so' no dia escolhido", () => {
+  const base = somarDias(hojeIso(), 3);
+  igual(gerarDatas(base, [], somarDias(base, 28)).join(), base, "sem dias marcados");
+});
+
+caso("dia marcado sem data ate' nao repete nada", () => {
+  const base = somarDias(hojeIso(), 3);
+  igual(gerarDatas(base, [1, 3], "").join(), base, "sem data limite");
+  igual(gerarDatas(base, [1, 3], null).join(), base, "data limite nula");
+});
+
+caso("data ate' que nao passa da base nao repete nada", () => {
+  const base = somarDias(hojeIso(), 3);
+  igual(gerarDatas(base, [1, 3], base).join(), base, "ate' igual a' base");
+  igual(gerarDatas(base, [1, 3], somarDias(base, -1)).join(), base, "ate' antes da base");
+});
+
+caso("repeticao pega so' os dias da semana marcados, e a base junto", () => {
+  const base = hojeIso();
+  const diaBase = new Date(base + "T12:00:00").getDay();
+  const alvo = (diaBase + 2) % 7;                       // um dia diferente do da base
+  const datas = gerarDatas(base, [alvo], somarDias(base, 28));
+  if (datas[0] !== base) throw new Error(`a base ${base} tem de estar na lista, veio ${datas[0]}`);
+  igual(datas.length, 5, "base + 4 ocorrencias em 28 dias");
+  for (const d of datas.slice(1)) {
+    const dia = new Date(d + "T12:00:00").getDay();
+    if (dia !== alvo) throw new Error(`${d} caiu no dia ${dia}, esperado ${alvo}`);
+  }
+});
+
+caso("repeticao nunca programa para tras", () => {
+  const base = somarDias(hojeIso(), -14);
+  const datas = gerarDatas(base, [0, 1, 2, 3, 4, 5, 6], somarDias(hojeIso(), 7));
+  if (!datas.length) throw new Error("a lista veio vazia");
+  const antigo = datas.filter(d => d < hojeIso());
+  if (antigo.length) throw new Error(`${antigo.length} data(s) no passado: ${antigo.slice(0, 3).join(", ")}`);
+});
+
 // ------------------------------------------------------------------ autoteste
 // Passar nao prova que detecta falha (regra 8d): aqui a bateria e' obrigada a
 // REPROVAR copias sabotadas -- e a reprovar PELO CASO CERTO, nao por qualquer
@@ -309,6 +351,10 @@ if (process.argv[2] === "--autoteste") {
       (t) => t.replace("if (d < 0) d += MIN_DIA; // atravessou a meia-noite", ""),
       "atravessa a meia-noite",
       "duracao negativa na virada do dia"],
+    ["js/agenda.js",
+      (t) => t.replace("return [...datas].filter(d => d >= piso).sort();", "return [...datas].sort();"),
+      "nunca programa para tras",
+      "repeticao voltando a programar em dia que ja' passou"],
   ];
 
   let quebradas = 0;
