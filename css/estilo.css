@@ -183,7 +183,14 @@ th{color:var(--texto-fraco);font-weight:500;font-size:11px;text-transform:upperc
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* ===== Formulários ===== */
+/* [hidden] perde para qualquer regra que declare display: sem isto, esconder um
+   .campo (display:flex) nao esconde nada. */
+[hidden]{display:none !important}
 .campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;min-width:0}
+/* campo com um botao ao lado (ex.: "Repetir até" + Limpar) */
+.campo-com-botao{display:flex;gap:8px;align-items:center;min-width:0}
+.campo-com-botao input{flex:1 1 auto}
+.campo-com-botao .btn{flex:0 0 auto;min-height:44px}
 .campo>span{font-size:12px;color:var(--texto-fraco)}
 input[type=text],input[type=time],input[type=number],input[type=date],select,textarea{
   background:var(--superficie-2);border:1px solid var(--borda);border-radius:var(--raio-p);
@@ -191,7 +198,9 @@ input[type=text],input[type=time],input[type=number],input[type=date],select,tex
   /* 16px evita o zoom automático do iOS ao focar, que desloca a tela toda */
   font-size:16px;
 }
-/* o controle nativo de hora/data tem largura própria e estoura a coluna no celular */
+/* o controle nativo de hora/data tem largura própria e estoura a coluna no celular.
+   ATENCAO: este appearance:none tambem apaga o "x" de limpar que o Chrome desenha
+   no campo de data — quem precisa limpar depende de um botao nosso do lado. */
 input[type=time],input[type=date]{
   -webkit-appearance:none;appearance:none;
   display:block;text-align:left;

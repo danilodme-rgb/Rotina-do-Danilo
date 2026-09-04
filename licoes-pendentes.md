@@ -22,6 +22,12 @@ estado normal, não falha. O que ela impede é a lição sumir sem ninguém ver.
   número idêntico ao de quem de fato estourou. Métrica tirada de campo mutável mede a última
   mutação, não o combinado. O que a pessoa escolheu precisa de campo próprio, e é ele a régua —
   vale para prazo, meta, orçamento e qualquer "planejado x realizado". (04/09/2026)
+- [ ] **Campo que nasce preenchido é uma resposta que o app deu no lugar da pessoa.** Valor
+  padrão em campo **opcional** vira um combinado que ela não fez e não percebeu — e o padrão
+  costuma contradizer o que o app realmente faz quando ela não mexe ali. Opcional nasce vazio;
+  padrão só onde o campo é obrigatório e a resposta certa é óbvia. Corolário: campo que pode
+  receber valor precisa de **caminho de volta visível**, e ele se confere no aparelho — controle
+  nativo tem botão de limpar que um `appearance:none` no CSS apaga sem avisar. (04/09/2026)
 - [ ] **Números lado a lado têm de fechar entre si na tela, não só na conta.** "1,0h" e "120%"
   na mesma linha pareciam contradição porque cada um arredondava de um jeito — a conta estava
   certa e a tela dizia que não. Onde dois números se dividem um pelo outro à vista da pessoa,
